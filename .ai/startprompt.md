@@ -33,8 +33,8 @@ skal bruke AI i overkant, med full selvtillit. All data er oppdiktet.
 ## Personlighetene
 
 Hver personlighet ligger i sin egen fil under `backend/src/features/panel/prompts/`:
-`pessimisten.md`, `optimisten.md`, `paragrafrytteren.md` og `bjarne.md`. Backend leser dem ved
-oppstart. Markedsføreren på laget eier disse filene og kan endre dem uten å røre koden. Navnene
+`pessimisten.md`, `optimisten.md`, `paragrafrytteren.md` og `bjarne.md`. Backend leser dem på
+nytt ved hvert kall, så endringer vises uten omstart. Markedsføreren på laget eier disse filene og kan endre dem uten å røre koden. Navnene
 under er utgangspunkt og kan byttes.
 
 Felles regler for alle fire: svar alltid på norsk og kort (maks 4 setninger per takstmann).
@@ -131,7 +131,6 @@ backend/
     services/panelService.ts       # tre parallelle kall + Bjarne
     clients/aiGateway.ts           # eneste stedet som snakker med gatewayen
     prompts/*.md                   # personlighetene (markedsfører)
-    types.ts
 frontend/
   src/main.tsx                     # providers + router
   src/features/panel/
@@ -146,7 +145,7 @@ shared/
   panel.ts                         # kontrakten under, brukes av begge
 ```
 
-Vite proxyer `/api` til backend på port 3001.
+Vite proxyer `/api` til backend på port 3055.
 
 Oppgavene i repoet (issues) følger denne inndelingen:
 
@@ -195,9 +194,9 @@ stoppe fordi Bjarne formaterte feil.
 
 ## Lokal oppstart og validering
 
-- `npm install` og deretter `npm run dev` fra rotmappa starter backend (3001) og frontend (5173).
+- `npm install` og deretter `npm run dev` fra rotmappa starter backend (3055) og frontend (5155).
 - `npm run check` kjører typesjekk for frontend, backend og shared.
-- Manuell test: åpne `http://localhost:5173`, velg en eksempelsak, trykk «Kall inn panelet» og
+- Manuell test: åpne `http://localhost:5155`, velg en eksempelsak, trykk «Kall inn panelet» og
   se tre kort pluss Bjarnes dom.
 
 ## Senere utvidelser (ikke del av første versjon)

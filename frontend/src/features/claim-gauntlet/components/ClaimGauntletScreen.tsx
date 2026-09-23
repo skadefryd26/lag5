@@ -33,6 +33,28 @@ const FACE_SIZE = 280;
 const FACE_HEIGHT = FACE_SIZE * 1.15;
 const DIALOG_PADDING = 32; // Paper p="md" (16px) på topp og bunn.
 
+// Alle uttrykkene Bjarnes ansikt kan vise (se bjarne.html) — brukes når svaret
+// hans skal få et helt tilfeldig uttrykk i stedet for et som passer teksten.
+const ALL_EXPRESSIONS = [
+  "skeptisk",
+  "mistenksom",
+  "tvilende",
+  "irritert",
+  "sint",
+  "rasende",
+  "undrende",
+  "tenkende",
+  "forbauset",
+  "sporrende",
+  "forvirret",
+  "hae",
+  "noytral",
+  "fornoyd",
+  "oppgitt",
+  "leiseg",
+  "grimase",
+];
+
 // Skjer det ingenting på 20 sekunder, bytter Bjarne ansiktsuttrykk selv —
 // han later ikke som han står stille og venter.
 const IDLE_MS = 20_000;
@@ -81,7 +103,14 @@ export function ClaimGauntletScreen() {
   useEffect(() => {
     const last = messages[messages.length - 1];
     if (last?.role === "bjarne") {
-      faceRef.current?.reactTo(last.text);
+      // Annenhver gang (omtrent) får han et helt tilfeldig uttrykk i stedet
+      // for et som faktisk passer svaret — det er mer Bjarne sånn.
+      if (Math.random() < 0.5) {
+        const pick = ALL_EXPRESSIONS[Math.floor(Math.random() * ALL_EXPRESSIONS.length)];
+        faceRef.current?.setExpression(pick);
+      } else {
+        faceRef.current?.reactTo(last.text);
+      }
       hudRef.current?.onReply(annoyanceScore, resolved);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

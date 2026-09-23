@@ -51,6 +51,7 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
     if (waitingCellRef.current) {
       apiRef.current.waiting = ui.createBadge(waitingCellRef.current, {
         kind: "waiting",
+        caption: false,
         autoPop: false,
       });
       apiRef.current.waiting.el.style.visibility = "hidden";
@@ -58,12 +59,14 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
     if (detectiveCellRef.current) {
       apiRef.current.detective = ui.createBadge(detectiveCellRef.current, {
         kind: "detective",
+        caption: false,
         autoPop: false,
       });
     }
     if (countrysideCellRef.current) {
       apiRef.current.countryside = ui.createBadge(countrysideCellRef.current, {
         kind: "countryside",
+        caption: false,
         autoPop: false,
       });
       apiRef.current.countryside.el.style.visibility = "hidden";

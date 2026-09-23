@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import type { ClaimGauntletRequest, ClaimGauntletResponse } from "../types/index.js";
 import { askBjarne } from "../services/bjarneService.js";
 import { AIGatewayError } from "../clients/aiGatewayClient.js";
+import { takeScoreAdjustments } from "../services/scoreAdjustmentService.js";
 
 export const claimGauntletRouter = Router();
 
@@ -14,9 +15,13 @@ claimGauntletRouter.post("/", async (req: Request, res: Response) => {
   }
 
   const history = Array.isArray(body.history) ? body.history : [];
-  const currentScore = typeof body.currentScore === "number" ? body.currentScore : 0;
+  const adjustments = takeScoreAdjustments();
+  const currentScore =
+    adjustments.annoyanceScore ??
+    (typeof body.currentScore === "number" ? body.currentScore : 0);
   const exhaustionScore =
-    typeof body.exhaustionScore === "number" ? body.exhaustionScore : 100;
+    adjustments.exhaustionScore ??
+    (typeof body.exhaustionScore === "number" ? body.exhaustionScore : 100);
 
   try {
     const result: ClaimGauntletResponse = await askBjarne(

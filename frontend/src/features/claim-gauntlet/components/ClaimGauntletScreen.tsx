@@ -17,6 +17,7 @@ import {
 import { useClaimGauntlet } from "../hooks/useClaimGauntlet";
 import { BjarneFace, type BjarneFaceHandle } from "../game-ui/BjarneFace";
 import { GameHud, type GameHudHandle } from "../game-ui/GameHud";
+import { AdminScoreModal } from "./AdminScoreModal";
 
 function vignetteIntensity(secondsLeft: number, roundSeconds: number) {
   const ratio = secondsLeft / roundSeconds;
@@ -31,6 +32,8 @@ function vignetteIntensity(secondsLeft: number, roundSeconds: number) {
 
 export function ClaimGauntletScreen() {
   const [draft, setDraft] = useState("");
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [adminKeys, setAdminKeys] = useState("");
   const {
     messages,
     annoyanceScore,
@@ -54,6 +57,25 @@ export function ClaimGauntletScreen() {
   }
 
   const vignette = resolved ? null : vignetteIntensity(secondsLeft, roundSeconds);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable) {
+        return;
+      }
+
+      const nextKeys = `${adminKeys}${event.key.toLowerCase()}`.slice(-3);
+      setAdminKeys(nextKeys);
+      if (nextKeys === "aaa") {
+        setAdminOpen(true);
+        setAdminKeys("");
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [adminKeys]);
 
   useEffect(() => {
     if (isSending) faceRef.current?.setExpression("tenkende");
@@ -165,6 +187,7 @@ export function ClaimGauntletScreen() {
           <Button onClick={handleSubmit} loading={isSending} color="orange">Send til Bjarne</Button>
         </Group>
       )}
+      <AdminScoreModal opened={adminOpen} onClose={() => setAdminOpen(false)} />
     </Box>
   );
 }

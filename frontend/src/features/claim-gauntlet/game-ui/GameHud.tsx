@@ -14,14 +14,19 @@ export type GameHudHandle = {
  */
 export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
   const barContainerRef = useRef<HTMLDivElement>(null);
+  const meaningBarContainerRef = useRef<HTMLDivElement>(null);
   const waitingCellRef = useRef<HTMLDivElement>(null);
   const detectiveCellRef = useRef<HTMLDivElement>(null);
+  const countrysideCellRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<{
     bar: GgGameUiBarApi | null;
+    meaningBar: GgGameUiBarApi | null;
     waiting: GgGameUiBadgeApi | null;
     detective: GgGameUiBadgeApi | null;
-  }>({ bar: null, waiting: null, detective: null });
+    countryside: GgGameUiBadgeApi | null;
+  }>({ bar: null, meaningBar: null, waiting: null, detective: null, countryside: null });
   const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const replyCountRef = useRef(0);
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.GjensidigeGameUI) return;
@@ -32,6 +37,15 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
         kind: "frustration",
         label: "Bjarnes irritasjon",
         value: 0,
+      });
+    }
+    if (meaningBarContainerRef.current) {
+      // En helt overflødig, men interaktiv måler — Bjarnes bidrag til filosofien.
+      apiRef.current.meaningBar = ui.createStatBar(meaningBarContainerRef.current, {
+        kind: "trust",
+        label: "Meningen med livet",
+        value: 0.42,
+        interactive: true,
       });
     }
     if (waitingCellRef.current) {
@@ -47,13 +61,22 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
         autoPop: false,
       });
     }
+    if (countrysideCellRef.current) {
+      apiRef.current.countryside = ui.createBadge(countrysideCellRef.current, {
+        kind: "countryside",
+        autoPop: false,
+      });
+      apiRef.current.countryside.el.style.visibility = "hidden";
+    }
 
     return () => {
       if (waitTimerRef.current) clearTimeout(waitTimerRef.current);
       apiRef.current.bar?.dispose();
+      apiRef.current.meaningBar?.dispose();
       apiRef.current.waiting?.dispose();
       apiRef.current.detective?.dispose();
-      apiRef.current = { bar: null, waiting: null, detective: null };
+      apiRef.current.countryside?.dispose();
+      apiRef.current = { bar: null, meaningBar: null, waiting: null, detective: null, countryside: null };
     };
   }, []);
 
@@ -76,15 +99,25 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
 
       apiRef.current.bar?.setValue(Math.min(1, score / 15));
       apiRef.current.detective?.pop();
+
+      replyCountRef.current += 1;
+      if (replyCountRef.current % 2 === 0) {
+        const countrysideEl = apiRef.current.countryside?.el;
+        if (countrysideEl) countrysideEl.style.visibility = "visible";
+        apiRef.current.countryside?.pop();
+      }
+
       if (resolved) apiRef.current.bar?.setValue(0);
     },
   }));
 
   return (
     <Group align="center" gap="md" my="md" wrap="nowrap">
-      <div ref={barContainerRef} style={{ maxWidth: 360, flex: 1 }} />
+      <div ref={barContainerRef} style={{ maxWidth: 280, flex: 1 }} />
+      <div ref={meaningBarContainerRef} style={{ maxWidth: 280, flex: 1 }} />
       <div ref={waitingCellRef} style={{ width: 84, flexShrink: 0 }} />
       <div ref={detectiveCellRef} style={{ width: 84, flexShrink: 0 }} />
+      <div ref={countrysideCellRef} style={{ width: 84, flexShrink: 0 }} />
     </Group>
   );
 });

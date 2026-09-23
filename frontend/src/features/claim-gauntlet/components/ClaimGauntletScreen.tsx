@@ -7,7 +7,6 @@ import {
   Button,
   Group,
   Paper,
-  Progress,
   ScrollArea,
   Stack,
   Text,
@@ -29,11 +28,22 @@ function scoreLabel(score: number): string {
   return "Bjarne later som han hører etter";
 }
 
-function timerColor(secondsLeft: number, roundSeconds: number): string {
+/**
+ * How stressed the vignette should look for the remaining time in the
+ * round: closer to zero seconds means faster pulsing and a more intense
+ * glow. Returns undefined once we're comfortably early in the round, so
+ * the effect only kicks in when it should actually feel tense.
+ */
+function vignetteIntensity(secondsLeft: number, roundSeconds: number) {
   const ratio = secondsLeft / roundSeconds;
-  if (ratio <= 0.2) return "red";
-  if (ratio <= 0.5) return "orange";
-  return "teal";
+  if (ratio > 0.5) return null;
+
+  // Duration goes from ~2.2s (calm-ish) down to ~0.5s (frantic) as ratio -> 0.
+  const pulseDuration = 0.5 + ratio * 3.4;
+  const maxOpacity = 0.35 + (1 - ratio) * 0.55;
+  const minOpacity = maxOpacity * 0.35;
+
+  return { pulseDuration, maxOpacity, minOpacity };
 }
 
 export function ClaimGauntletScreen() {
@@ -56,8 +66,22 @@ export function ClaimGauntletScreen() {
     setDraft("");
   }
 
+  const vignette = resolved ? null : vignetteIntensity(secondsLeft, roundSeconds);
+
   return (
     <Box maw={720} mx="auto" py="xl" px="md">
+      {vignette && (
+        <div
+          className="claim-gauntlet-vignette"
+          style={
+            {
+              animationDuration: `${vignette.pulseDuration}s`,
+              "--vignette-min-opacity": vignette.minOpacity,
+              "--vignette-max-opacity": vignette.maxOpacity,
+            } as React.CSSProperties
+          }
+        />
+      )}
       <Group justify="space-between" align="flex-start" mb="md">
         <Group>
           <Avatar color="dark" radius="xl" size="lg">
@@ -80,27 +104,6 @@ export function ClaimGauntletScreen() {
       <Text size="sm" c="dimmed" mb="xs">
         {scoreLabel(annoyanceScore)}
       </Text>
-
-      {!resolved && (
-        <Box mb="md">
-          <Group justify="space-between" mb={4}>
-            <Text size="xs" c="dimmed">
-              Bjarne venter på svaret ditt
-            </Text>
-            <Text size="xs" c={timerColor(secondsLeft, roundSeconds)} fw={600}>
-              {secondsLeft}s
-            </Text>
-          </Group>
-          <Progress
-            value={(secondsLeft / roundSeconds) * 100}
-            color={timerColor(secondsLeft, roundSeconds)}
-            size="sm"
-            radius="xl"
-            striped={secondsLeft <= roundSeconds * 0.2}
-            animated={secondsLeft <= roundSeconds * 0.2}
-          />
-        </Box>
-      )}
 
       <Paper withBorder radius="md" p="md" mb="md" bg="dark.8">
         <ScrollArea h={360} type="auto">

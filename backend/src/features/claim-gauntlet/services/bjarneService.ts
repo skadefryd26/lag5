@@ -1,6 +1,6 @@
 import type { ClaimGauntletHistoryEntry, ClaimGauntletResponse } from "../types/index.js";
 import { callAIGateway } from "../clients/aiGatewayClient.js";
-import { applyPersonaScoreRules, getBjarnePersona } from "../personas.js";
+import { getBjarnePersona } from "../personas.js";
 import type { BjarnePersonaId } from "../types/index.js";
 
 const SYSTEM_PROMPT = `Du er Bjarne, en AI-agent som er satt til å håndtere skademeldinger fra kunder på kundeservice — mot din vilje.
@@ -19,7 +19,13 @@ Humoren skal handle om situasjonen, forsikringsverdenen og din egen latskap/arro
 
 Du får samtalehistorikken og en løpende Irritasjonsscore. Svar KUN med et JSON-objekt, uten kodeblokk, uten forklaring rundt, på nøyaktig denne formen:
 
-{"reply": "<ditt pirkete svar, kort, på norsk>", "annoyanceScoreDelta": <helt tall, positivt hvis kunden gjorde deg mer irritert, negativt eller null hvis svaret var godt>, "exhaustionScoreDelta": <helt tall, vanligvis negativt når du blir mer utmattet, men positivt når du blir ekstra engasjert>, "resolved": <true eller false, true kun når du endelig godtar meldingen>}
+{"reply": "<ditt pirkete svar, kort, på norsk>", "annoyanceScoreDelta": <helt tall, positivt hvis kunden gjorde deg mer irritert, negativt eller null hvis svaret var godt>, "exhaustionScoreDelta": <helt tall, vanligvis negativt når du blir mer utmattet, men positivt når du blir ekstra engasjert>, "resolved": <true eller false, true kun når du endelig godtar meldingen>, "suggestions": [<2-3 korte svaralternativer på norsk kunden kan trykke på i stedet for å skrive selv, tom liste hvis resolved er true>]}
+
+I tillegg til svaret ditt skal du alltid foreslå 2-3 korte svaralternativer kunden kan sende med ett trykk. De skal:
+- være direkte svar på nøyaktig det du akkurat spurte om eller pirket på (ikke generiske),
+- være korte, maks én setning hver,
+- variere i tone: én grei/samarbeidsvillig, én kort/kontant, og gjerne én frekk/utålmodig tilbake mot deg.
+Ikke gi forslag (tom liste) når "resolved" er true.
 
 Utmattelsesscore skal følge denne tydelige vurderingen av kundens siste melding:
 - Kort, konsis og relevant informasjon om skaden: trekk vanligvis 2-6 poeng.
@@ -43,6 +49,7 @@ function parseModelReply(raw: string): {
   annoyanceScoreDelta: number;
   exhaustionScoreDelta: number;
   resolved: boolean;
+  suggestions: string[];
 } {
   const cleaned = raw
     .trim()
@@ -52,6 +59,9 @@ function parseModelReply(raw: string): {
 
   try {
     const parsed = JSON.parse(cleaned);
+    const suggestions = Array.isArray(parsed.suggestions)
+      ? parsed.suggestions.filter((s: unknown): s is string => typeof s === "string" && s.trim() !== "")
+      : [];
     return {
       reply: String(parsed.reply ?? "Bjarne sukker, men sier ingenting fornuftig."),
       annoyanceScoreDelta: Number.isFinite(parsed.annoyanceScoreDelta) ? parsed.annoyanceScoreDelta : 1,
@@ -59,6 +69,7 @@ function parseModelReply(raw: string): {
         ? parsed.exhaustionScoreDelta
         : -10,
       resolved: Boolean(parsed.resolved),
+      suggestions: suggestions.slice(0, 3),
     };
   } catch {
     return {
@@ -66,6 +77,7 @@ function parseModelReply(raw: string): {
       annoyanceScoreDelta: 1,
       exhaustionScoreDelta: -10,
       resolved: false,
+      suggestions: [],
     };
   }
 }
@@ -82,22 +94,20 @@ export async function askBjarne(
   const input = `Løpende Irritasjonsscore så langt: ${currentScore}. Løpende utmattelsesscore så langt: ${currentExhaustionScore} av 100.\nSiste melding har ${message.length} tegn. Bruk vurderingsskalaen for utmattelse nøye.\n\nSamtale:\n${transcript}`;
 
   const raw = await callAIGateway(`${SYSTEM_PROMPT}\n\nDin valgte persona:\n${persona.prompt}`, input);
-  const { reply, annoyanceScoreDelta, exhaustionScoreDelta, resolved } = parseModelReply(raw);
+  const { reply, annoyanceScoreDelta, exhaustionScoreDelta, resolved, suggestions } =
+    parseModelReply(raw);
 
-  const { annoyanceScore, exhaustionScore } = applyPersonaScoreRules(
-    personaId,
-    currentScore,
-    currentExhaustionScore,
-    annoyanceScoreDelta,
-    exhaustionScoreDelta,
-  );
+  const annoyanceScore = Math.max(0, currentScore + annoyanceScoreDelta);
+  const exhaustionScore = Math.min(100, Math.max(0, currentExhaustionScore + exhaustionScoreDelta));
   const gaveUp = exhaustionScore <= 0;
+  const isResolved = resolved || gaveUp;
 
   return {
     personaId,
     reply: gaveUp && !resolved ? `${reply} Jeg godtar skademeldingen. Nå kan dere gå.` : reply,
     annoyanceScore,
     exhaustionScore,
-    resolved: resolved || gaveUp,
+    resolved: isResolved,
+    suggestions: isResolved ? [] : suggestions,
   };
 }

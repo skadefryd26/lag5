@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   Card,
+  Chip,
   Group,
   Paper,
   Progress,
@@ -16,6 +17,7 @@ import {
 import { useClaimGauntlet } from "../hooks/useClaimGauntlet";
 import { BjarneFace, type BjarneFaceHandle } from "../game-ui/BjarneFace";
 import { GameHud, type GameHudHandle } from "../game-ui/GameHud";
+import { AdminScoreModal } from "./AdminScoreModal";
 import { BjarneHeader } from "../game-ui/BjarneHeader";
 
 function vignetteIntensity(secondsLeft: number, roundSeconds: number) {
@@ -72,11 +74,14 @@ const IDLE_EXPRESSIONS = [
 
 export function ClaimGauntletScreen() {
   const [draft, setDraft] = useState("");
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [adminKeys, setAdminKeys] = useState("");
   const {
     messages,
     annoyanceScore,
     exhaustionScore,
     resolved,
+    suggestions,
     sendMessage,
     restart,
     isSending,
@@ -96,7 +101,32 @@ export function ClaimGauntletScreen() {
     setDraft("");
   }
 
+  function handleSuggestionClick(suggestion: string) {
+    hudRef.current?.onSend();
+    sendMessage(suggestion);
+    setDraft("");
+  }
+
   const vignette = resolved ? null : vignetteIntensity(secondsLeft, roundSeconds);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable) {
+        return;
+      }
+
+      const nextKeys = `${adminKeys}${event.key.toLowerCase()}`.slice(-3);
+      setAdminKeys(nextKeys);
+      if (nextKeys === "aaa") {
+        setAdminOpen(true);
+        setAdminKeys("");
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [adminKeys]);
 
   useEffect(() => {
     if (isSending) faceRef.current?.setExpression("tenkende");
@@ -207,12 +237,7 @@ export function ClaimGauntletScreen() {
       <Box mb="md">
         <Group justify="space-between" mb={4}>
           <Text size="sm" fw={600}>Bjarnes utmattelse</Text>
-          <Group gap="md">
-            <Text size="sm" c="dimmed">{exhaustionScore}/100</Text>
-            <Text size="sm" c={secondsLeft <= 10 ? "red.4" : "dimmed"}>
-              {secondsLeft}s igjen
-            </Text>
-          </Group>
+          <Text size="sm" c="dimmed">{exhaustionScore}/100</Text>
         </Group>
         <Progress value={exhaustionScore} color={exhaustionScore <= 25 ? "red" : "orange"} />
       </Box>
@@ -233,28 +258,46 @@ export function ClaimGauntletScreen() {
           <Button onClick={restart} variant="light" color="orange">Meld en ny skade (om du orker)</Button>
         </Stack>
       ) : (
-        <Group align="flex-end">
-          <Textarea
-            flex={1}
-            size="lg"
-            placeholder="Beskriv skaden din, om du tør…"
-            autosize
-            minRows={2}
-            maxRows={5}
-            value={draft}
-            onChange={(e) => setDraft(e.currentTarget.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit();
-              }
-            }}
-          />
-          <Button size="lg" onClick={handleSubmit} loading={isSending} color="orange">
-            Send til Bjarne
-          </Button>
-        </Group>
+        <Stack gap="xs">
+          {suggestions.length > 0 && !isSending && (
+            <Group gap="xs">
+              {suggestions.map((suggestion, i) => (
+                <Chip
+                  key={i}
+                  variant="light"
+                  color="orange"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  style={{ cursor: "pointer" }}
+                >
+                  {suggestion}
+                </Chip>
+              ))}
+            </Group>
+          )}
+          <Group align="flex-end">
+            <Textarea
+              flex={1}
+              size="lg"
+              placeholder="Beskriv skaden din, om du tør…"
+              autosize
+              minRows={2}
+              maxRows={5}
+              value={draft}
+              onChange={(e) => setDraft(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
+            />
+            <Button size="lg" onClick={handleSubmit} loading={isSending} color="orange">
+              Send til Bjarne
+            </Button>
+          </Group>
+        </Stack>
       )}
+      <AdminScoreModal opened={adminOpen} onClose={() => setAdminOpen(false)} />
     </Box>
   );
 }

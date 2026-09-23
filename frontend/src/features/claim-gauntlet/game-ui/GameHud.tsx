@@ -115,12 +115,12 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
   }));
 
   return (
-    <Group align="center" gap="md" my="md" wrap="wrap" style={{ width: "100%" }}>
-      <div ref={barContainerRef} style={{ minWidth: 0, maxWidth: 280, flex: "1 1 140px" }} />
-      <div ref={meaningBarContainerRef} style={{ minWidth: 0, maxWidth: 280, flex: "1 1 140px" }} />
-      <div ref={waitingCellRef} style={{ width: "clamp(56px, 8vw, 84px)", flexShrink: 0 }} />
-      <div ref={detectiveCellRef} style={{ width: "clamp(56px, 8vw, 84px)", flexShrink: 0 }} />
-      <div ref={countrysideCellRef} style={{ width: "clamp(56px, 8vw, 84px)", flexShrink: 0 }} />
+    <Group align="center" gap="md" my="md" wrap="nowrap">
+      <div ref={barContainerRef} style={{ maxWidth: 280, flex: 1 }} />
+      <div ref={meaningBarContainerRef} style={{ maxWidth: 280, flex: 1 }} />
+      <div ref={waitingCellRef} style={{ width: 84, flexShrink: 0 }} />
+      <div ref={detectiveCellRef} style={{ width: 84, flexShrink: 0 }} />
+      <div ref={countrysideCellRef} style={{ width: 84, flexShrink: 0 }} />
     </Group>
   );
 });

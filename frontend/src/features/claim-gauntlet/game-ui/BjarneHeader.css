@@ -46,7 +46,7 @@
   margin: 0 auto;
   padding: clamp(10px, 2vw, 20px) clamp(16px, 4vw, 32px);
   display: grid;
-  grid-template-columns: clamp(90px, 14vw, 140px) minmax(0, 1fr) auto;
+  grid-template-columns: clamp(90px, 14vw, 140px) minmax(0, 1fr);
   align-items: center;
   gap: clamp(8px, 2.5vw, 24px);
 }
@@ -120,11 +120,6 @@
     transform: rotate(-2deg);
   }
 }
-.bjarne-header__badges {
-  display: grid;
-  grid-template-columns: repeat(3, clamp(52px, 5vw, 74px));
-  gap: 2px;
-}
 .bjarne-header__toast {
   position: absolute;
   left: 50%;
@@ -146,9 +141,6 @@
 @media (max-width: 700px) {
   .bjarne-header__inner {
     grid-template-columns: clamp(70px, 20vw, 110px) minmax(0, 1fr);
-  }
-  .bjarne-header__badges {
-    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {

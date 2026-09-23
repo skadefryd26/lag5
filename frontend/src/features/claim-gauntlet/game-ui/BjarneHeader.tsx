@@ -13,9 +13,6 @@ import "./BjarneHeader.css";
 export function BjarneHeader() {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const mascotRef = useRef<HTMLDivElement>(null);
-  const badge1Ref = useRef<HTMLDivElement>(null);
-  const badge2Ref = useRef<HTMLDivElement>(null);
-  const badge3Ref = useRef<HTMLDivElement>(null);
   const toastRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,16 +49,6 @@ export function BjarneHeader() {
       ? ui.createBadge(mascotRef.current, { kind: "bjarne", caption: false, delay: 250 })
       : null;
     if (bjarne) disposers.push(bjarne.dispose);
-
-    ([
-      [badge1Ref.current, "thumbDown", 1500],
-      [badge2Ref.current, "countryside", 1700],
-      [badge3Ref.current, "escalation", 1900],
-    ] as const).forEach(([el, kind, delay]) => {
-      if (!el) return;
-      const b = ui.createBadge(el, { kind, caption: false, delay });
-      disposers.push(b.dispose);
-    });
 
     // Klikk på Bjarne: tittelen bølger. Klikker du for mye, går han tom for kaffe.
     const toast = toastRef.current;
@@ -121,11 +108,6 @@ export function BjarneHeader() {
             Bjarnes Erstatningsprøvelse
           </h1>
           <p className="bjarne-header__tag">Meld en skade. Om du tør.</p>
-        </div>
-        <div className="bjarne-header__badges" aria-hidden="true">
-          <div ref={badge1Ref} />
-          <div ref={badge2Ref} />
-          <div ref={badge3Ref} />
         </div>
       </div>
       <div className="bjarne-header__toast" ref={toastRef} role="status" />

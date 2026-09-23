@@ -34,6 +34,11 @@ function vignetteIntensity(secondsLeft: number, roundSeconds: number) {
   return { pulseDuration, maxOpacity, minOpacity };
 }
 
+// Bjarnes ansikt og dialogboksen skal være like høye, så de ser ut som ett par.
+const FACE_SIZE = 280;
+const FACE_HEIGHT = FACE_SIZE * 1.15;
+const DIALOG_PADDING = 32; // Paper p="md" (16px) på topp og bunn.
+
 export function ClaimGauntletScreen() {
   const [draft, setDraft] = useState("");
   const {
@@ -91,8 +96,14 @@ export function ClaimGauntletScreen() {
       </Box>
 
       <Group align="stretch" wrap="nowrap" gap="md" mb="xs">
-        <Paper withBorder radius="md" p="md" bg="dark.8" style={{ flex: 1, minWidth: 0 }}>
-          <ScrollArea h={360} type="auto">
+        <Paper
+          withBorder
+          radius="md"
+          p="md"
+          bg="dark.8"
+          style={{ flex: 1, minWidth: 0, height: FACE_HEIGHT }}
+        >
+          <ScrollArea h={FACE_HEIGHT - DIALOG_PADDING} type="auto">
             <Stack gap="sm">
               {messages.length === 0 && (
                 <Text c="dimmed" fs="italic">
@@ -130,7 +141,7 @@ export function ClaimGauntletScreen() {
           </ScrollArea>
         </Paper>
 
-        <BjarneFace ref={faceRef} size={280} />
+        <BjarneFace ref={faceRef} size={FACE_SIZE} />
       </Group>
 
       <GameHud ref={hudRef} />
@@ -154,6 +165,7 @@ export function ClaimGauntletScreen() {
         <Group align="flex-end">
           <Textarea
             flex={1}
+            size="lg"
             placeholder="Beskriv skaden din, om du tør…"
             autosize
             minRows={2}
@@ -167,7 +179,7 @@ export function ClaimGauntletScreen() {
               }
             }}
           />
-          <Button onClick={handleSubmit} loading={isSending} color="orange">
+          <Button size="lg" onClick={handleSubmit} loading={isSending} color="orange">
             Send til Bjarne
           </Button>
         </Group>

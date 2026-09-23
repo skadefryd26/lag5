@@ -73,7 +73,7 @@ export function useClaimGauntlet() {
       setSuggestions([]);
       mutation.mutate(message);
     },
-    [energyScore, mutation, resolved],
+    [mutation, resolved],
   );
 
   const restart = useCallback(() => {

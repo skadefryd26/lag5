@@ -5,7 +5,6 @@
   font-style: normal;
   font-display: swap;
 }
-
 body {
   margin: 0;
   background: #060b2e;
@@ -32,4 +31,3 @@ body {
   animation-iteration-count: infinite;
   transition: opacity 0.4s ease;
 }
-

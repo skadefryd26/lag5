@@ -7,6 +7,7 @@ import {
   Button,
   Group,
   Paper,
+  Progress,
   ScrollArea,
   Stack,
   Text,
@@ -17,17 +18,10 @@ import { useClaimGauntlet } from "../hooks/useClaimGauntlet";
 import { BjarneFace, type BjarneFaceHandle } from "../game-ui/BjarneFace";
 import { GameHud, type GameHudHandle } from "../game-ui/GameHud";
 
-/**
- * How stressed the vignette should look for the remaining time in the
- * round: closer to zero seconds means faster pulsing and a more intense
- * glow. Returns null once we're comfortably early in the round, so
- * the effect only kicks in when it should actually feel tense.
- */
 function vignetteIntensity(secondsLeft: number, roundSeconds: number) {
   const ratio = secondsLeft / roundSeconds;
   if (ratio > 0.5) return null;
 
-  // Duration goes from ~2.2s (calm-ish) down to ~0.5s (frantic) as ratio -> 0.
   const pulseDuration = 0.5 + ratio * 3.4;
   const maxOpacity = 0.35 + (1 - ratio) * 0.55;
   const minOpacity = maxOpacity * 0.35;
@@ -40,6 +34,7 @@ export function ClaimGauntletScreen() {
   const {
     messages,
     annoyanceScore,
+    exhaustionScore,
     resolved,
     sendMessage,
     restart,
@@ -88,16 +83,10 @@ export function ClaimGauntletScreen() {
         />
       )}
       <Group mb="md">
-        <Avatar color="dark" radius="xl" size="lg">
-          B
-        </Avatar>
+        <Avatar color="dark" radius="xl" size="lg">B</Avatar>
         <div>
-          <Title order={2} c="orange.6">
-            Bjarnes Erstatningsprøvelse
-          </Title>
-          <Text size="sm" c="dimmed">
-            Meld en skade. Om du tør.
-          </Text>
+          <Title order={2} c="orange.6">Bjarnes Erstatningsprøvelse</Title>
+          <Text size="sm" c="dimmed">Meld en skade. Om du tør.</Text>
         </div>
       </Group>
 
@@ -106,9 +95,7 @@ export function ClaimGauntletScreen() {
           <ScrollArea h={360} type="auto">
             <Stack gap="sm">
               {messages.length === 0 && (
-                <Text c="dimmed" fs="italic">
-                  Bjarne har ikke sukket ennå. Skriv skademeldingen din under.
-                </Text>
+                <Text c="dimmed" fs="italic">Bjarne har ikke sukket ennå. Skriv skademeldingen din under.</Text>
               )}
               {messages.map((m, i) => (
                 <Paper
@@ -116,25 +103,16 @@ export function ClaimGauntletScreen() {
                   p="sm"
                   radius="md"
                   bg={m.role === "bjarne" ? "dark.6" : "blue.9"}
-                  style={{
-                    alignSelf: m.role === "bjarne" ? "flex-start" : "flex-end",
-                    maxWidth: "85%",
-                  }}
+                  style={{ alignSelf: m.role === "bjarne" ? "flex-start" : "flex-end", maxWidth: "85%" }}
                 >
-                  <Text size="xs" c="dimmed" mb={4}>
-                    {m.role === "bjarne" ? "Bjarne" : "Deg"}
-                  </Text>
+                  <Text size="xs" c="dimmed" mb={4}>{m.role === "bjarne" ? "Bjarne" : "Deg"}</Text>
                   <Text>{m.text}</Text>
                 </Paper>
               ))}
               {isSending && (
                 <Paper p="sm" radius="md" bg="dark.6" style={{ alignSelf: "flex-start" }}>
-                  <Text size="xs" c="dimmed" mb={4}>
-                    Bjarne
-                  </Text>
-                  <Text fs="italic" c="dimmed">
-                    … sukker og later som han leser meldingen din …
-                  </Text>
+                  <Text size="xs" c="dimmed" mb={4}>Bjarne</Text>
+                  <Text fs="italic" c="dimmed">… sukker og later som han leser meldingen din …</Text>
                 </Paper>
               )}
             </Stack>
@@ -144,22 +122,28 @@ export function ClaimGauntletScreen() {
         <BjarneFace ref={faceRef} size={280} />
       </Group>
 
+      <Box mb="md">
+        <Group justify="space-between" mb={4}>
+          <Text size="sm" fw={600}>Bjarnes utmattelse</Text>
+          <Text size="sm" c="dimmed">{exhaustionScore}/100</Text>
+        </Group>
+        <Progress value={exhaustionScore} color={exhaustionScore <= 25 ? "red" : "orange"} />
+      </Box>
+
       <GameHud ref={hudRef} />
 
       {error && (
-        <Alert color="red" mb="md" title="Bjarne har gitt helt opp">
-          {error.message}
-        </Alert>
+        <Alert color="red" mb="md" title="Bjarne har gitt helt opp">{error.message}</Alert>
       )}
 
       {resolved ? (
         <Stack align="center" gap="xs">
           <Text fw={700} c="green.5">
-            Bjarne godtok skademeldingen din. Motvillig.
+            {exhaustionScore === 0
+              ? "Bjarne ga opp, godtok skademeldingen aggressivt, og du vant."
+              : "Bjarne godtok skademeldingen din. Motvillig."}
           </Text>
-          <Button onClick={restart} variant="light" color="orange">
-            Meld en ny skade (om du orker)
-          </Button>
+          <Button onClick={restart} variant="light" color="orange">Meld en ny skade (om du orker)</Button>
         </Stack>
       ) : (
         <Group align="flex-end">
@@ -178,9 +162,7 @@ export function ClaimGauntletScreen() {
               }
             }}
           />
-          <Button onClick={handleSubmit} loading={isSending} color="orange">
-            Send til Bjarne
-          </Button>
+          <Button onClick={handleSubmit} loading={isSending} color="orange">Send til Bjarne</Button>
         </Group>
       )}
     </Box>

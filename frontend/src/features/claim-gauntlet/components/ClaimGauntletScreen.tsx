@@ -72,6 +72,10 @@ const IDLE_EXPRESSIONS = [
   "sporrende",
 ];
 
+// Samme skala som irritasjonssliden i GameHud (score/15 = prosenten som vises).
+// Over halvparten er ansiktet alltid irritert, uansett hva annet som skjer.
+const ANNOYANCE_SCALE = 15;
+
 export function ClaimGauntletScreen() {
   const [draft, setDraft] = useState("");
   const [adminOpen, setAdminOpen] = useState(false);
@@ -109,6 +113,7 @@ export function ClaimGauntletScreen() {
   }
 
   const vignette = resolved ? null : vignetteIntensity(secondsLeft, roundSeconds);
+  const isVeryIrritated = annoyanceScore / ANNOYANCE_SCALE > 0.5;
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -130,15 +135,18 @@ export function ClaimGauntletScreen() {
   }, [adminKeys]);
 
   useEffect(() => {
-    if (isSending) faceRef.current?.setExpression("tenkende");
-  }, [isSending]);
+    if (isSending) faceRef.current?.setExpression(isVeryIrritated ? "irritert" : "tenkende");
+  }, [isSending, isVeryIrritated]);
 
   useEffect(() => {
     const last = messages[messages.length - 1];
     if (last?.role === "bjarne") {
-      // Annenhver gang (omtrent) får han et helt tilfeldig uttrykk i stedet
+      // Over 50 % irritasjon: han er alltid irritert, uansett hva svaret sier.
+      // Ellers, annenhver gang (omtrent), et helt tilfeldig uttrykk i stedet
       // for et som faktisk passer svaret — det er mer Bjarne sånn.
-      if (Math.random() < 0.5) {
+      if (isVeryIrritated) {
+        faceRef.current?.setExpression("irritert");
+      } else if (Math.random() < 0.5) {
         const pick = ALL_EXPRESSIONS[Math.floor(Math.random() * ALL_EXPRESSIONS.length)];
         faceRef.current?.setExpression(pick);
       } else {
@@ -157,10 +165,13 @@ export function ClaimGauntletScreen() {
 
   // Ansiktet skal alltid vise noe: bytt uttrykk ved hver melding (over), og
   // hvis det er helt stille, la Bjarne skifte uttrykk selv hvert 20. sekund.
+  // Er irritasjonen over 50 %, er det alltid "irritert" som velges.
   useEffect(() => {
     function scheduleIdle() {
       idleTimerRef.current = setTimeout(() => {
-        const pick = IDLE_EXPRESSIONS[Math.floor(Math.random() * IDLE_EXPRESSIONS.length)];
+        const pick = isVeryIrritated
+          ? "irritert"
+          : IDLE_EXPRESSIONS[Math.floor(Math.random() * IDLE_EXPRESSIONS.length)];
         faceRef.current?.setExpression(pick);
         scheduleIdle();
       }, IDLE_MS);
@@ -170,7 +181,7 @@ export function ClaimGauntletScreen() {
     return () => {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
-  }, [messages, isSending, resolved]);
+  }, [messages, isSending, resolved, isVeryIrritated]);
 
   return (
     <Box maw={900} mx="auto" py="xl" px="md">

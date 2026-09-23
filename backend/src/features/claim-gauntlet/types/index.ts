@@ -19,6 +19,7 @@ export type ClaimGauntletResponse = {
   annoyanceScore: number;
   energyScore: number;
   resolved: boolean;
+  suggestions: string[];
 };
 
 export type AIGatewayBody = {

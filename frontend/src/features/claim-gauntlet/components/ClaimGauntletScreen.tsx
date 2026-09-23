@@ -72,6 +72,10 @@ const IDLE_EXPRESSIONS = [
   "sporrende",
 ];
 
+// Samme varighet som QR-badgen i BjarneFace viser seg selv: når den er
+// ferdig, går vi videre til skjermen for mottatt skademelding.
+const QR_BADGE_MS = 10_000;
+
 export function ClaimGauntletScreen() {
   const [draft, setDraft] = useState("");
   const [adminOpen, setAdminOpen] = useState(false);
@@ -84,6 +88,7 @@ export function ClaimGauntletScreen() {
     suggestions,
     sendMessage,
     restart,
+    forceResolve,
     isSending,
     error,
     persona,
@@ -93,10 +98,15 @@ export function ClaimGauntletScreen() {
   const faceRef = useRef<BjarneFaceHandle>(null);
   const hudRef = useRef<GameHudHandle>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const qrTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleSubmit() {
     if (!draft.trim()) return;
-    if (draft.trim() === "Meld skade nå!!!") faceRef.current?.showQrBadge();
+    if (draft.trim() === "Meld skade nå!!!") {
+      faceRef.current?.showQrBadge();
+      if (qrTimerRef.current) clearTimeout(qrTimerRef.current);
+      qrTimerRef.current = setTimeout(forceResolve, QR_BADGE_MS);
+    }
     hudRef.current?.onSend();
     sendMessage(draft.trim());
     setDraft("");
@@ -106,6 +116,11 @@ export function ClaimGauntletScreen() {
     hudRef.current?.onSend();
     sendMessage(suggestion);
     setDraft("");
+  }
+
+  function handleRestart() {
+    if (qrTimerRef.current) clearTimeout(qrTimerRef.current);
+    restart();
   }
 
   const vignette = resolved ? null : vignetteIntensity(secondsLeft, roundSeconds);
@@ -128,6 +143,12 @@ export function ClaimGauntletScreen() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [adminKeys]);
+
+  useEffect(() => {
+    return () => {
+      if (qrTimerRef.current) clearTimeout(qrTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (isSending) faceRef.current?.setExpression("tenkende");
@@ -287,7 +308,7 @@ export function ClaimGauntletScreen() {
           </Group>
         </Stack>
       )}
-      <ClaimAcceptedModal opened={resolved} energyScore={energyScore} onNewClaim={restart} />
+      <ClaimAcceptedModal opened={resolved} energyScore={energyScore} onNewClaim={handleRestart} />
       <AdminScoreModal opened={adminOpen} onClose={() => setAdminOpen(false)} />
     </Box>
   );

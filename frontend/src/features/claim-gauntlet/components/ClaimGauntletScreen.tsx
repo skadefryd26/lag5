@@ -18,6 +18,7 @@ import { BjarneFace, type BjarneFaceHandle } from "../game-ui/BjarneFace";
 import { GameHud, type GameHudHandle } from "../game-ui/GameHud";
 import { AdminScoreModal } from "./AdminScoreModal";
 import { BjarneHeader } from "../game-ui/BjarneHeader";
+import { ClaimAcceptedModal } from "./ClaimAcceptedModal";
 
 function vignetteIntensity(secondsLeft: number, roundSeconds: number) {
   const ratio = secondsLeft / roundSeconds;
@@ -245,16 +246,7 @@ export function ClaimGauntletScreen() {
         <Alert color="red" mb="md" title="Bjarne har gitt helt opp">{error.message}</Alert>
       )}
 
-      {resolved ? (
-        <Stack align="center" gap="xs">
-          <Text fw={700} c="green.5">
-            {energyScore === 0
-              ? "Bjarne ga opp, godtok skademeldingen aggressivt, og du vant."
-              : "Bjarne godtok skademeldingen din. Motvillig."}
-          </Text>
-          <Button onClick={restart} variant="light" color="orange">Meld en ny skade (om du orker)</Button>
-        </Stack>
-      ) : (
+      {!resolved && (
         <Stack gap="xs">
           {suggestions.length > 0 && !isSending && (
             <Group gap="xs">
@@ -294,6 +286,7 @@ export function ClaimGauntletScreen() {
           </Group>
         </Stack>
       )}
+      <ClaimAcceptedModal opened={resolved} energyScore={energyScore} onNewClaim={restart} />
       <AdminScoreModal opened={adminOpen} onClose={() => setAdminOpen(false)} />
     </Box>
   );

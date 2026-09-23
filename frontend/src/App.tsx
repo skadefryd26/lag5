@@ -6,7 +6,7 @@ import { router } from "./router/router";
 
 const theme = createTheme({
   primaryColor: "orange",
-  fontFamily: "Georgia, 'Times New Roman', serif",
+  fontFamily: "'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
   defaultRadius: "md",
   colors: {
     dark: [

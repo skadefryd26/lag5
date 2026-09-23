@@ -1,26 +1,27 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import { Group, Stack, Text } from "@mantine/core";
+import { Group } from "@mantine/core";
 
 export type GameHudHandle = {
-  /** Kalles etter hvert svar fra Bjarne: oppdaterer måleren og feirer/klager med et merke. */
-  update: (score: number, resolved: boolean) => void;
+  /** Kalles når en melding sendes: starter to-sekunders-teller til timeglass-badgen. */
+  onSend: () => void;
+  /** Kalles når Bjarne har svart: avbryter tellingen, oppdaterer sliden og popper detektiv-badgen. */
+  onReply: (score: number, resolved: boolean) => void;
 };
 
-const NEGATIVE_BADGES = ["thumbDown", "escalation", "repeat", "waiting", "countryside"];
-const SHOWN_BADGES = ["thumbDown", "waiting", "escalation", "repeat", "thumbUp", "solved"];
-
 /**
- * Rad med badges og en irritasjonsmåler fra Gjensidiges spill-UI-bibliotek (three.js),
- * plassert under svarfeltet. Måleren følger irritasjonsscoren, badgene poppes når noe skjer.
+ * Slider (irritasjonsmåler) med to badges ved siden av, fra Gjensidiges spill-UI-bibliotek
+ * (three.js). Plasseres mellom dialogboksen og inputfeltet.
  */
 export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
   const barContainerRef = useRef<HTMLDivElement>(null);
-  const badgeRowRef = useRef<HTMLDivElement>(null);
+  const waitingCellRef = useRef<HTMLDivElement>(null);
+  const detectiveCellRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<{
     bar: GgGameUiBarApi | null;
-    badges: Record<string, GgGameUiBadgeApi>;
-  }>({ bar: null, badges: {} });
-  const prevScoreRef = useRef(0);
+    waiting: GgGameUiBadgeApi | null;
+    detective: GgGameUiBadgeApi | null;
+  }>({ bar: null, waiting: null, detective: null });
+  const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.GjensidigeGameUI) return;
@@ -33,49 +34,57 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
         value: 0,
       });
     }
-
-    if (badgeRowRef.current) {
-      const row = badgeRowRef.current;
-      for (const kind of SHOWN_BADGES) {
-        const cell = document.createElement("div");
-        cell.style.width = "84px";
-        row.appendChild(cell);
-        apiRef.current.badges[kind] = ui.createBadge(cell, { kind, autoPop: false });
-      }
+    if (waitingCellRef.current) {
+      apiRef.current.waiting = ui.createBadge(waitingCellRef.current, {
+        kind: "waiting",
+        autoPop: false,
+      });
+      apiRef.current.waiting.el.style.visibility = "hidden";
+    }
+    if (detectiveCellRef.current) {
+      apiRef.current.detective = ui.createBadge(detectiveCellRef.current, {
+        kind: "detective",
+        autoPop: false,
+      });
     }
 
     return () => {
+      if (waitTimerRef.current) clearTimeout(waitTimerRef.current);
       apiRef.current.bar?.dispose();
-      Object.values(apiRef.current.badges).forEach((b) => b.dispose());
-      apiRef.current = { bar: null, badges: {} };
+      apiRef.current.waiting?.dispose();
+      apiRef.current.detective?.dispose();
+      apiRef.current = { bar: null, waiting: null, detective: null };
     };
   }, []);
 
   useImperativeHandle(ref, () => ({
-    update(score: number, resolved: boolean) {
-      const prev = prevScoreRef.current;
-      prevScoreRef.current = score;
-      apiRef.current.bar?.setValue(Math.min(1, score / 15));
+    onSend() {
+      if (waitTimerRef.current) clearTimeout(waitTimerRef.current);
+      waitTimerRef.current = setTimeout(() => {
+        const el = apiRef.current.waiting?.el;
+        if (el) el.style.visibility = "visible";
+        apiRef.current.waiting?.pop();
+      }, 2000);
+    },
+    onReply(score: number, resolved: boolean) {
+      if (waitTimerRef.current) {
+        clearTimeout(waitTimerRef.current);
+        waitTimerRef.current = null;
+      }
+      const el = apiRef.current.waiting?.el;
+      if (el) el.style.visibility = "hidden";
 
-      if (resolved) {
-        apiRef.current.badges.solved?.pop();
-        apiRef.current.badges.thumbUp?.pop();
-        return;
-      }
-      if (score > prev) {
-        const pick = NEGATIVE_BADGES[Math.floor(Math.random() * NEGATIVE_BADGES.length)];
-        apiRef.current.badges[pick]?.pop();
-      }
+      apiRef.current.bar?.setValue(Math.min(1, score / 15));
+      apiRef.current.detective?.pop();
+      if (resolved) apiRef.current.bar?.setValue(0);
     },
   }));
 
   return (
-    <Stack gap={4} mt="md">
-      <Text size="xs" c="dimmed">
-        Bjarnes humørkart
-      </Text>
-      <div ref={barContainerRef} style={{ maxWidth: 360 }} />
-      <Group ref={badgeRowRef} gap="xs" wrap="wrap" mt={4} />
-    </Stack>
+    <Group align="center" gap="md" my="md" wrap="nowrap">
+      <div ref={barContainerRef} style={{ maxWidth: 360, flex: 1 }} />
+      <div ref={waitingCellRef} style={{ width: 84, flexShrink: 0 }} />
+      <div ref={detectiveCellRef} style={{ width: 84, flexShrink: 0 }} />
+    </Group>
   );
 });

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import {
   Alert,
-  Avatar,
   Box,
   Button,
   Group,
@@ -11,11 +10,11 @@ import {
   Stack,
   Text,
   Textarea,
-  Title,
 } from "@mantine/core";
 import { useClaimGauntlet } from "../hooks/useClaimGauntlet";
 import { BjarneFace, type BjarneFaceHandle } from "../game-ui/BjarneFace";
 import { GameHud, type GameHudHandle } from "../game-ui/GameHud";
+import { BjarneHeader } from "../game-ui/BjarneHeader";
 
 /**
  * How stressed the vignette should look for the remaining time in the
@@ -87,19 +86,9 @@ export function ClaimGauntletScreen() {
           }
         />
       )}
-      <Group mb="md">
-        <Avatar color="dark" radius="xl" size="lg">
-          B
-        </Avatar>
-        <div>
-          <Title order={2} c="orange.6">
-            Bjarnes Erstatningsprøvelse
-          </Title>
-          <Text size="sm" c="dimmed">
-            Meld en skade. Om du tør.
-          </Text>
-        </div>
-      </Group>
+      <Box mb="md">
+        <BjarneHeader />
+      </Box>
 
       <Group align="stretch" wrap="nowrap" gap="md" mb="xs">
         <Paper withBorder radius="md" p="md" bg="dark.8" style={{ flex: 1, minWidth: 0 }}>

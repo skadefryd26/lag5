@@ -3,6 +3,7 @@ dotenv.config({ path: ".env.local" });
 import express from "express";
 import cors from "cors";
 import { claimGauntletRouter } from "./features/claim-gauntlet/routes/claimGauntletRouter.js";
+import { scoreAdjustmentRouter } from "./features/claim-gauntlet/routes/scoreAdjustmentRouter.js";
 
 const app = express();
 const port = process.env.PORT ?? 3001;
@@ -11,6 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/claim-gauntlet", claimGauntletRouter);
+app.use("/api/admin/adjust", scoreAdjustmentRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "Bjarne er våken, dessverre." });

@@ -6,10 +6,15 @@ export type GameHudHandle = {
   onSend: () => void;
   /** Kalles når Bjarne har svart: avbryter tellingen, oppdaterer sliden og popper detektiv-badgen. */
   onReply: (score: number, resolved: boolean) => void;
+  /** Kalles med antall meldinger kunden har sendt: viser "På rad" på 3, 6, 9 osv. */
+  onUserMessageCount: (count: number) => void;
 };
 
+const DETECTIVE_VISIBLE_MS = 10_000;
+const STREAK_VISIBLE_MS = 20_000;
+
 /**
- * Slider (irritasjonsmåler) med to badges ved siden av, fra Gjensidiges spill-UI-bibliotek
+ * Slider (irritasjonsmåler) med badges ved siden av, fra Gjensidiges spill-UI-bibliotek
  * (three.js). Plasseres mellom dialogboksen og inputfeltet.
  */
 export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
@@ -18,14 +23,18 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
   const waitingCellRef = useRef<HTMLDivElement>(null);
   const detectiveCellRef = useRef<HTMLDivElement>(null);
   const countrysideCellRef = useRef<HTMLDivElement>(null);
+  const streakCellRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<{
     bar: GgGameUiBarApi | null;
     meaningBar: GgGameUiBarApi | null;
     waiting: GgGameUiBadgeApi | null;
     detective: GgGameUiBadgeApi | null;
     countryside: GgGameUiBadgeApi | null;
-  }>({ bar: null, meaningBar: null, waiting: null, detective: null, countryside: null });
+    streak: GgGameUiBadgeApi | null;
+  }>({ bar: null, meaningBar: null, waiting: null, detective: null, countryside: null, streak: null });
   const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const detectiveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const streakTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const replyCountRef = useRef(0);
 
   useEffect(() => {
@@ -62,6 +71,9 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
         caption: false,
         autoPop: false,
       });
+      // Rent dekorativt — skal ikke kunne klikkes eller poppes av deltakeren.
+      apiRef.current.detective.el.style.pointerEvents = "none";
+      apiRef.current.detective.el.style.visibility = "hidden";
     }
     if (countrysideCellRef.current) {
       apiRef.current.countryside = ui.createBadge(countrysideCellRef.current, {
@@ -71,15 +83,33 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
       });
       apiRef.current.countryside.el.style.visibility = "hidden";
     }
+    if (streakCellRef.current) {
+      apiRef.current.streak = ui.createBadge(streakCellRef.current, {
+        kind: "streak",
+        caption: false,
+        autoPop: false,
+      });
+      apiRef.current.streak.el.style.visibility = "hidden";
+    }
 
     return () => {
       if (waitTimerRef.current) clearTimeout(waitTimerRef.current);
+      if (detectiveTimerRef.current) clearTimeout(detectiveTimerRef.current);
+      if (streakTimerRef.current) clearTimeout(streakTimerRef.current);
       apiRef.current.bar?.dispose();
       apiRef.current.meaningBar?.dispose();
       apiRef.current.waiting?.dispose();
       apiRef.current.detective?.dispose();
       apiRef.current.countryside?.dispose();
-      apiRef.current = { bar: null, meaningBar: null, waiting: null, detective: null, countryside: null };
+      apiRef.current.streak?.dispose();
+      apiRef.current = {
+        bar: null,
+        meaningBar: null,
+        waiting: null,
+        detective: null,
+        countryside: null,
+        streak: null,
+      };
     };
   }, []);
 
@@ -101,7 +131,14 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
       if (el) el.style.visibility = "hidden";
 
       apiRef.current.bar?.setValue(Math.min(1, score / 15));
+
+      const detectiveEl = apiRef.current.detective?.el;
+      if (detectiveEl) detectiveEl.style.visibility = "visible";
       apiRef.current.detective?.pop();
+      if (detectiveTimerRef.current) clearTimeout(detectiveTimerRef.current);
+      detectiveTimerRef.current = setTimeout(() => {
+        if (detectiveEl) detectiveEl.style.visibility = "hidden";
+      }, DETECTIVE_VISIBLE_MS);
 
       replyCountRef.current += 1;
       if (replyCountRef.current % 2 === 0) {
@@ -112,6 +149,16 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
 
       if (resolved) apiRef.current.bar?.setValue(0);
     },
+    onUserMessageCount(count: number) {
+      if (count === 0 || count % 3 !== 0) return;
+      const el = apiRef.current.streak?.el;
+      if (el) el.style.visibility = "visible";
+      apiRef.current.streak?.pop();
+      if (streakTimerRef.current) clearTimeout(streakTimerRef.current);
+      streakTimerRef.current = setTimeout(() => {
+        if (el) el.style.visibility = "hidden";
+      }, STREAK_VISIBLE_MS);
+    },
   }));
 
   return (
@@ -121,6 +168,7 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
       <div ref={waitingCellRef} style={{ width: 84, flexShrink: 0 }} />
       <div ref={detectiveCellRef} style={{ width: 84, flexShrink: 0 }} />
       <div ref={countrysideCellRef} style={{ width: 84, flexShrink: 0 }} />
+      <div ref={streakCellRef} style={{ width: 84, flexShrink: 0 }} />
     </Group>
   );
 });

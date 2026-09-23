@@ -7,6 +7,7 @@ import {
   Button,
   Group,
   Paper,
+  Progress,
   ScrollArea,
   Stack,
   Text,
@@ -30,8 +31,16 @@ function scoreLabel(score: number): string {
 
 export function ClaimGauntletScreen() {
   const [draft, setDraft] = useState("");
-  const { messages, annoyanceScore, resolved, sendMessage, restart, isSending, error } =
-    useClaimGauntlet();
+  const {
+    messages,
+    annoyanceScore,
+    exhaustionScore,
+    resolved,
+    sendMessage,
+    restart,
+    isSending,
+    error,
+  } = useClaimGauntlet();
 
   function handleSubmit() {
     if (!draft.trim()) return;
@@ -63,6 +72,14 @@ export function ClaimGauntletScreen() {
       <Text size="sm" c="dimmed" mb="xs">
         {scoreLabel(annoyanceScore)}
       </Text>
+
+      <Box mb="md">
+        <Group justify="space-between" mb={4}>
+          <Text size="sm" fw={600}>Bjarnes utmattelse</Text>
+          <Text size="sm" c="dimmed">{exhaustionScore}/100</Text>
+        </Group>
+        <Progress value={exhaustionScore} color={exhaustionScore <= 25 ? "red" : "orange"} />
+      </Box>
 
       <Paper withBorder radius="md" p="md" mb="md" bg="dark.8">
         <ScrollArea h={360} type="auto">
@@ -109,7 +126,9 @@ export function ClaimGauntletScreen() {
       {resolved ? (
         <Stack align="center" gap="xs">
           <Text fw={700} c="green.5">
-            Bjarne godtok skademeldingen din. Motvillig.
+            {exhaustionScore === 0
+              ? "Bjarne ga opp, godtok skademeldingen aggressivt, og du vant."
+              : "Bjarne godtok skademeldingen din. Motvillig."}
           </Text>
           <Button onClick={restart} variant="light" color="orange">
             Meld en ny skade (om du orker)

@@ -6,21 +6,33 @@ export const BJARNE_PERSONAS: readonly BjarnePersona[] = [
     name: "Kaffestreik-Bjarne",
     difficulty: "vanskelig",
     description: "Kaffemaskinen er tom. Dette lover dårlig.",
-    waitingToleranceRounds: 1,
+    rules: {
+      roundSeconds: 45,
+      timeoutAnnoyancePenalty: 5,
+      timeoutExhaustionPenalty: 10,
+    },
   },
   {
     id: "bureaucrat",
     name: "Byråkrat-Bjarne",
     difficulty: "middels",
     description: "Bjarne har funnet et skjema for skjemaet.",
-    waitingToleranceRounds: 2,
+    rules: {
+      roundSeconds: 60,
+      timeoutAnnoyancePenalty: 3,
+      timeoutExhaustionPenalty: 6,
+    },
   },
   {
     id: "after-lunch",
     name: "Bjarne etter lunsj",
     difficulty: "lett",
     description: "Han har spist. Samarbeidsevnen er tilbake, foreløpig.",
-    waitingToleranceRounds: 3,
+    rules: {
+      roundSeconds: 75,
+      timeoutAnnoyancePenalty: 1,
+      timeoutExhaustionPenalty: 2,
+    },
   },
 ];
 

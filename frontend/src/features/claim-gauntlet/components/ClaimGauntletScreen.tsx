@@ -4,6 +4,7 @@ import {
   Alert,
   Box,
   Button,
+  Card,
   Group,
   Paper,
   Progress,
@@ -80,6 +81,7 @@ export function ClaimGauntletScreen() {
     restart,
     isSending,
     error,
+    persona,
     secondsLeft,
     roundSeconds,
   } = useClaimGauntlet();
@@ -151,6 +153,20 @@ export function ClaimGauntletScreen() {
         <BjarneHeader />
       </Box>
 
+      <Card withBorder radius="md" p="md" mb="md" bg="dark.7">
+        <div>
+          <Text size="xs" tt="uppercase" fw={700} c="orange.4" lts="0.08em">
+            Du møtte
+          </Text>
+          <Text fw={700} size="lg">
+            {persona.name}
+          </Text>
+          <Text size="sm" c="dimmed">
+            {persona.description}
+          </Text>
+        </div>
+      </Card>
+
       <Group align="stretch" wrap="nowrap" gap="md" mb="xs">
         <Paper
           withBorder
@@ -185,7 +201,6 @@ export function ClaimGauntletScreen() {
             </Stack>
           </ScrollArea>
         </Paper>
-
         <BjarneFace ref={faceRef} size={FACE_SIZE} />
       </Group>
 

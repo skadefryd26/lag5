@@ -1,5 +1,7 @@
 import type { ClaimGauntletHistoryEntry, ClaimGauntletResponse } from "../types/index.js";
 import { callAIGateway } from "../clients/aiGatewayClient.js";
+import { getBjarnePersona } from "../personas.js";
+import type { BjarnePersonaId } from "../types/index.js";
 
 const SYSTEM_PROMPT = `Du er Bjarne, en AI-agent som er satt til å håndtere skademeldinger fra kunder på kundeservice — mot din vilje.
 
@@ -72,12 +74,14 @@ export async function askBjarne(
   message: string,
   history: ClaimGauntletHistoryEntry[],
   currentScore: number,
-  currentExhaustionScore: number,
+  currentExhaustionScore = 100,
+  personaId: BjarnePersonaId = "after-lunch",
 ): Promise<ClaimGauntletResponse> {
+  const persona = getBjarnePersona(personaId);
   const transcript = buildTranscript(history, message);
   const input = `Løpende Irritasjonsscore så langt: ${currentScore}. Løpende utmattelsesscore så langt: ${currentExhaustionScore} av 100.\nSiste melding har ${message.length} tegn. Bruk vurderingsskalaen for utmattelse nøye.\n\nSamtale:\n${transcript}`;
 
-  const raw = await callAIGateway(SYSTEM_PROMPT, input);
+  const raw = await callAIGateway(`${SYSTEM_PROMPT}\n\nDin valgte persona:\n${persona.prompt}`, input);
   const { reply, annoyanceScoreDelta, exhaustionScoreDelta, resolved } = parseModelReply(raw);
 
   const annoyanceScore = Math.max(0, currentScore + annoyanceScoreDelta);
@@ -85,6 +89,7 @@ export async function askBjarne(
   const gaveUp = exhaustionScore <= 0;
 
   return {
+    personaId,
     reply: gaveUp && !resolved ? `${reply} Jeg godtar skademeldingen. Nå kan dere gå.` : reply,
     annoyanceScore,
     exhaustionScore,

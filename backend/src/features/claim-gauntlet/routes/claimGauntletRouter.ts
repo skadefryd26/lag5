@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import type { ClaimGauntletRequest, ClaimGauntletResponse } from "../types/index.js";
 import { askBjarne } from "../services/bjarneService.js";
 import { AIGatewayError } from "../clients/aiGatewayClient.js";
+import { isBjarnePersonaId } from "../personas.js";
 
 export const claimGauntletRouter = Router();
 
@@ -13,11 +14,21 @@ claimGauntletRouter.post("/", async (req: Request, res: Response) => {
     return;
   }
 
+  if (!isBjarnePersonaId(body.personaId)) {
+    res.status(400).json({ error: "personaId er påkrevd og må være en kjent Bjarne-persona." });
+    return;
+  }
+
   const history = Array.isArray(body.history) ? body.history : [];
   const currentScore = typeof body.currentScore === "number" ? body.currentScore : 0;
 
   try {
-    const result: ClaimGauntletResponse = await askBjarne(body.message, history, currentScore);
+    const result: ClaimGauntletResponse = await askBjarne(
+      body.message,
+      history,
+      currentScore,
+      body.personaId,
+    );
     res.json(result);
   } catch (error) {
     if (error instanceof AIGatewayError) {

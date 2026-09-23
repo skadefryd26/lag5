@@ -5,6 +5,7 @@ import {
   Avatar,
   Box,
   Button,
+  Card,
   Group,
   Paper,
   ScrollArea,
@@ -45,6 +46,7 @@ export function ClaimGauntletScreen() {
     restart,
     isSending,
     error,
+    persona,
     secondsLeft,
     roundSeconds,
   } = useClaimGauntlet();
@@ -101,6 +103,20 @@ export function ClaimGauntletScreen() {
         </div>
       </Group>
 
+      <Card withBorder radius="md" p="md" mb="md" bg="dark.7">
+        <div>
+          <Text size="xs" tt="uppercase" fw={700} c="orange.4" lts="0.08em">
+            Du møtte
+          </Text>
+          <Text fw={700} size="lg">
+            {persona.name}
+          </Text>
+          <Text size="sm" c="dimmed">
+            {persona.description}
+          </Text>
+        </div>
+      </Card>
+
       <Group align="stretch" wrap="nowrap" gap="md" mb="xs">
         <Paper withBorder radius="md" p="md" bg="dark.8" style={{ flex: 1, minWidth: 0 }}>
           <ScrollArea h={360} type="auto">
@@ -140,7 +156,6 @@ export function ClaimGauntletScreen() {
             </Stack>
           </ScrollArea>
         </Paper>
-
         <BjarneFace ref={faceRef} size={280} />
       </Group>
 

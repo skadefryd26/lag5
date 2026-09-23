@@ -9,6 +9,9 @@
 .env.*
 !.env.example
 
+# JetBrains IDE project files
+.idea/
+
 # JavaScript dependencies and build output
 node_modules/
 dist/

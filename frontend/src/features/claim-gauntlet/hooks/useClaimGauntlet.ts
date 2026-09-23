@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { sendClaimMessage } from "../api/claimGauntletApi";
+import { pickRandomPersona } from "../personas";
 import type { ClaimGauntletHistoryEntry } from "../types";
 
 const STARTING_EXHAUSTION_SCORE = 100;
@@ -26,6 +27,7 @@ function pickImpatienceLine(round: number): string {
 }
 
 export function useClaimGauntlet() {
+  const [persona, setPersona] = useState(() => pickRandomPersona());
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [annoyanceScore, setAnnoyanceScore] = useState(0);
   const [exhaustionScore, setExhaustionScore] = useState(STARTING_EXHAUSTION_SCORE);
@@ -40,6 +42,7 @@ export function useClaimGauntlet() {
       return sendClaimMessage({
         message,
         history,
+        personaId: persona.id,
         currentScore: annoyanceScore,
         exhaustionScore,
       });
@@ -65,10 +68,11 @@ export function useClaimGauntlet() {
       setSuggestions([]);
       mutation.mutate(message);
     },
-    [annoyanceScore, exhaustionScore, messages, mutation, resolved],
+    [mutation, resolved],
   );
 
   const restart = useCallback(() => {
+    setPersona((currentPersona) => pickRandomPersona(currentPersona.id));
     setMessages([]);
     setAnnoyanceScore(0);
     setExhaustionScore(STARTING_EXHAUSTION_SCORE);
@@ -103,6 +107,7 @@ export function useClaimGauntlet() {
 
   return {
     messages,
+    persona,
     annoyanceScore,
     exhaustionScore,
     resolved,

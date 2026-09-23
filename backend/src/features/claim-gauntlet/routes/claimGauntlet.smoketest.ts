@@ -11,15 +11,17 @@ async function main() {
     [],
     0,
     100,
+    "bureaucrat",
   );
   console.log("Bjarnes svar:", JSON.stringify(result, null, 2));
 
   if (
     !result.reply ||
     typeof result.annoyanceScore !== "number" ||
-    typeof result.exhaustionScore !== "number"
+    typeof result.exhaustionScore !== "number" ||
+    result.personaId !== "bureaucrat"
   ) {
-    console.error("Smoketest feilet: mangler reply eller score.");
+    console.error("Smoketest feilet: mangler svar, scorer eller persona.");
     process.exit(1);
   }
 

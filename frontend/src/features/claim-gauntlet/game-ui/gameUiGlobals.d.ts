@@ -7,6 +7,8 @@ declare global {
     el: HTMLElement;
     pop: () => GgGameUiBadgeApi;
     setKind: (kind: string) => GgGameUiBadgeApi;
+    /** Den underliggende three.js-gruppen for figuren badgen viser (kun "bjarne"-kinden bruker dette aktivt). */
+    emblem: () => { userData: Record<string, unknown> };
     dispose: () => void;
   }
 
@@ -32,7 +34,14 @@ declare global {
     ) => GgGameUiBadgeApi;
     createStatBar: (
       container: HTMLElement,
-      opts: { kind: "health" | "frustration" | "trust"; value?: number; label?: string },
+      opts: {
+        kind: "health" | "frustration" | "trust";
+        value?: number;
+        label?: string;
+        interactive?: boolean;
+        kindOverrides?: Record<string, unknown>;
+        onChange?: (value: number) => void;
+      },
     ) => GgGameUiBarApi;
   }
 

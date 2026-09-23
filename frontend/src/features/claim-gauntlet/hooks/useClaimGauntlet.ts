@@ -4,6 +4,8 @@ import { sendClaimMessage } from "../api/claimGauntletApi";
 import { pickRandomPersona } from "../personas";
 import type { ClaimGauntletHistoryEntry } from "../types";
 
+const STARTING_EXHAUSTION_SCORE = 100;
+
 type DisplayMessage = {
   role: "user" | "bjarne";
   text: string;
@@ -28,6 +30,7 @@ export function useClaimGauntlet() {
   const [persona, setPersona] = useState(() => pickRandomPersona());
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [annoyanceScore, setAnnoyanceScore] = useState(0);
+  const [exhaustionScore, setExhaustionScore] = useState(STARTING_EXHAUSTION_SCORE);
   const [resolved, setResolved] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(ROUND_SECONDS);
   const timeoutRoundRef = useRef(0);
@@ -40,6 +43,7 @@ export function useClaimGauntlet() {
         history,
         personaId: persona.id,
         currentScore: annoyanceScore,
+        exhaustionScore,
       });
     },
     onSuccess: (result, message) => {
@@ -49,6 +53,7 @@ export function useClaimGauntlet() {
         { role: "bjarne", text: result.reply },
       ]);
       setAnnoyanceScore(result.annoyanceScore);
+      setExhaustionScore(result.exhaustionScore);
       setResolved(result.resolved);
       setSecondsLeft(ROUND_SECONDS);
       timeoutRoundRef.current = 0;
@@ -67,6 +72,7 @@ export function useClaimGauntlet() {
     setPersona((currentPersona) => pickRandomPersona(currentPersona.id));
     setMessages([]);
     setAnnoyanceScore(0);
+    setExhaustionScore(STARTING_EXHAUSTION_SCORE);
     setResolved(false);
     setSecondsLeft(ROUND_SECONDS);
     timeoutRoundRef.current = 0;
@@ -98,6 +104,7 @@ export function useClaimGauntlet() {
     messages,
     persona,
     annoyanceScore,
+    exhaustionScore,
     resolved,
     sendMessage,
     restart,

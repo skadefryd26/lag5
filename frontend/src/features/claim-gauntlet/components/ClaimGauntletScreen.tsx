@@ -2,33 +2,26 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import {
   Alert,
-  Avatar,
   Box,
   Button,
   Card,
   Group,
   Paper,
+  Progress,
   ScrollArea,
   Stack,
   Text,
   Textarea,
-  Title,
 } from "@mantine/core";
 import { useClaimGauntlet } from "../hooks/useClaimGauntlet";
 import { BjarneFace, type BjarneFaceHandle } from "../game-ui/BjarneFace";
 import { GameHud, type GameHudHandle } from "../game-ui/GameHud";
+import { BjarneHeader } from "../game-ui/BjarneHeader";
 
-/**
- * How stressed the vignette should look for the remaining time in the
- * round: closer to zero seconds means faster pulsing and a more intense
- * glow. Returns null once we're comfortably early in the round, so
- * the effect only kicks in when it should actually feel tense.
- */
 function vignetteIntensity(secondsLeft: number, roundSeconds: number) {
   const ratio = secondsLeft / roundSeconds;
   if (ratio > 0.5) return null;
 
-  // Duration goes from ~2.2s (calm-ish) down to ~0.5s (frantic) as ratio -> 0.
   const pulseDuration = 0.5 + ratio * 3.4;
   const maxOpacity = 0.35 + (1 - ratio) * 0.55;
   const minOpacity = maxOpacity * 0.35;
@@ -36,11 +29,31 @@ function vignetteIntensity(secondsLeft: number, roundSeconds: number) {
   return { pulseDuration, maxOpacity, minOpacity };
 }
 
+// Bjarnes ansikt og dialogboksen skal være like høye, så de ser ut som ett par.
+const FACE_SIZE = 280;
+const FACE_HEIGHT = FACE_SIZE * 1.15;
+const DIALOG_PADDING = 32; // Paper p="md" (16px) på topp og bunn.
+
+// Skjer det ingenting på 20 sekunder, bytter Bjarne ansiktsuttrykk selv —
+// han later ikke som han står stille og venter.
+const IDLE_MS = 20_000;
+const IDLE_EXPRESSIONS = [
+  "undrende",
+  "tenkende",
+  "skeptisk",
+  "oppgitt",
+  "mistenksom",
+  "tvilende",
+  "forbauset",
+  "sporrende",
+];
+
 export function ClaimGauntletScreen() {
   const [draft, setDraft] = useState("");
   const {
     messages,
     annoyanceScore,
+    exhaustionScore,
     resolved,
     sendMessage,
     restart,
@@ -52,6 +65,7 @@ export function ClaimGauntletScreen() {
   } = useClaimGauntlet();
   const faceRef = useRef<BjarneFaceHandle>(null);
   const hudRef = useRef<GameHudHandle>(null);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleSubmit() {
     if (!draft.trim()) return;
@@ -75,6 +89,23 @@ export function ClaimGauntletScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
 
+  // Ansiktet skal alltid vise noe: bytt uttrykk ved hver melding (over), og
+  // hvis det er helt stille, la Bjarne skifte uttrykk selv hvert 20. sekund.
+  useEffect(() => {
+    function scheduleIdle() {
+      idleTimerRef.current = setTimeout(() => {
+        const pick = IDLE_EXPRESSIONS[Math.floor(Math.random() * IDLE_EXPRESSIONS.length)];
+        faceRef.current?.setExpression(pick);
+        scheduleIdle();
+      }, IDLE_MS);
+    }
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    if (!resolved) scheduleIdle();
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [messages, isSending, resolved]);
+
   return (
     <Box maw={900} mx="auto" py="xl" px="md">
       {vignette && (
@@ -89,19 +120,9 @@ export function ClaimGauntletScreen() {
           }
         />
       )}
-      <Group mb="md">
-        <Avatar color="dark" radius="xl" size="lg">
-          B
-        </Avatar>
-        <div>
-          <Title order={2} c="orange.6">
-            Bjarnes Erstatningsprøvelse
-          </Title>
-          <Text size="sm" c="dimmed">
-            Meld en skade. Om du tør.
-          </Text>
-        </div>
-      </Group>
+      <Box mb="md">
+        <BjarneHeader />
+      </Box>
 
       <Card withBorder radius="md" p="md" mb="md" bg="dark.7">
         <div>
@@ -118,13 +139,17 @@ export function ClaimGauntletScreen() {
       </Card>
 
       <Group align="stretch" wrap="nowrap" gap="md" mb="xs">
-        <Paper withBorder radius="md" p="md" bg="dark.8" style={{ flex: 1, minWidth: 0 }}>
-          <ScrollArea h={360} type="auto">
+        <Paper
+          withBorder
+          radius="md"
+          p="md"
+          bg="dark.8"
+          style={{ flex: 1, minWidth: 0, height: FACE_HEIGHT }}
+        >
+          <ScrollArea h={FACE_HEIGHT - DIALOG_PADDING} type="auto">
             <Stack gap="sm">
               {messages.length === 0 && (
-                <Text c="dimmed" fs="italic">
-                  Bjarne har ikke sukket ennå. Skriv skademeldingen din under.
-                </Text>
+                <Text c="dimmed" fs="italic">Bjarne har ikke sukket ennå. Skriv skademeldingen din under.</Text>
               )}
               {messages.map((m, i) => (
                 <Paper
@@ -132,54 +157,52 @@ export function ClaimGauntletScreen() {
                   p="sm"
                   radius="md"
                   bg={m.role === "bjarne" ? "dark.6" : "blue.9"}
-                  style={{
-                    alignSelf: m.role === "bjarne" ? "flex-start" : "flex-end",
-                    maxWidth: "85%",
-                  }}
+                  style={{ alignSelf: m.role === "bjarne" ? "flex-start" : "flex-end", maxWidth: "85%" }}
                 >
-                  <Text size="xs" c="dimmed" mb={4}>
-                    {m.role === "bjarne" ? "Bjarne" : "Deg"}
-                  </Text>
+                  <Text size="xs" c="dimmed" mb={4}>{m.role === "bjarne" ? "Bjarne" : "Deg"}</Text>
                   <Text>{m.text}</Text>
                 </Paper>
               ))}
               {isSending && (
                 <Paper p="sm" radius="md" bg="dark.6" style={{ alignSelf: "flex-start" }}>
-                  <Text size="xs" c="dimmed" mb={4}>
-                    Bjarne
-                  </Text>
-                  <Text fs="italic" c="dimmed">
-                    … sukker og later som han leser meldingen din …
-                  </Text>
+                  <Text size="xs" c="dimmed" mb={4}>Bjarne</Text>
+                  <Text fs="italic" c="dimmed">… sukker og later som han leser meldingen din …</Text>
                 </Paper>
               )}
             </Stack>
           </ScrollArea>
         </Paper>
-        <BjarneFace ref={faceRef} size={280} />
+        <BjarneFace ref={faceRef} size={FACE_SIZE} />
       </Group>
+
+      <Box mb="md">
+        <Group justify="space-between" mb={4}>
+          <Text size="sm" fw={600}>Bjarnes utmattelse</Text>
+          <Text size="sm" c="dimmed">{exhaustionScore}/100</Text>
+        </Group>
+        <Progress value={exhaustionScore} color={exhaustionScore <= 25 ? "red" : "orange"} />
+      </Box>
 
       <GameHud ref={hudRef} />
 
       {error && (
-        <Alert color="red" mb="md" title="Bjarne har gitt helt opp">
-          {error.message}
-        </Alert>
+        <Alert color="red" mb="md" title="Bjarne har gitt helt opp">{error.message}</Alert>
       )}
 
       {resolved ? (
         <Stack align="center" gap="xs">
           <Text fw={700} c="green.5">
-            Bjarne godtok skademeldingen din. Motvillig.
+            {exhaustionScore === 0
+              ? "Bjarne ga opp, godtok skademeldingen aggressivt, og du vant."
+              : "Bjarne godtok skademeldingen din. Motvillig."}
           </Text>
-          <Button onClick={restart} variant="light" color="orange">
-            Meld en ny skade (om du orker)
-          </Button>
+          <Button onClick={restart} variant="light" color="orange">Meld en ny skade (om du orker)</Button>
         </Stack>
       ) : (
         <Group align="flex-end">
           <Textarea
             flex={1}
+            size="lg"
             placeholder="Beskriv skaden din, om du tør…"
             autosize
             minRows={2}
@@ -193,7 +216,7 @@ export function ClaimGauntletScreen() {
               }
             }}
           />
-          <Button onClick={handleSubmit} loading={isSending} color="orange">
+          <Button size="lg" onClick={handleSubmit} loading={isSending} color="orange">
             Send til Bjarne
           </Button>
         </Group>

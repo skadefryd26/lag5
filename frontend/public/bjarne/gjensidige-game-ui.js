@@ -20,7 +20,8 @@
     lantern: '#FFC23D', green: '#35D07F', mint: '#8AF5C0', sky: '#4F9DFF', skyLight: '#A6D1FF',
     coral: '#FF5A4D', orange: '#FF8A2A', teal: '#2CC7C4', pink: '#FF7EB6', violet: '#9B6BFF',
     cloud: '#DCE3FF', lime: '#B8F04A', peach: '#FFB38A', lilac: '#C9A8FF', aqua: '#6EE7F0',
-    cobalt: '#3D6BFF', barn: '#C63A2E', roof: '#3A3F66', wood: '#C07A3E'
+    cobalt: '#3D6BFF', barn: '#C63A2E', roof: '#3A3F66', wood: '#C07A3E',
+    skin: '#F2B48C', skinShade: '#E0976B', hair: '#5B3A29', coffee: '#5A3418'
   };
 
   var BAR_KINDS = {
@@ -57,6 +58,7 @@
     detective:  { label: 'Detektiv',      color: 'peach',    build: 'magnifier', gesture: 'search' },
     calm:       { label: 'Rolig hav',     color: 'aqua',     build: 'wave',      gesture: 'calm' },
     streak:     { label: 'På rad',        color: 'cobalt',   build: 'flame',     gesture: 'flicker' },
+    bjarne:     { label: 'Bjarne',        color: 'lantern',  build: 'bjarne',    gesture: 'bjarne' },
     countryside:{ label: 'Den må du lenger ut på landet med', color: 'green', build: 'barn', gesture: 'skeptic' }
   };
 
@@ -671,6 +673,80 @@
 
     // ================= Merker: emblemer =================
     var BUILD = {
+      bjarne: function () {
+        var g = new THREE.Group(), skin = toon('skin'), ink = toon('navy'), white = toon('white');
+        // Hettegenser med «B» på brystet
+        var hoodie = mesh(new THREE.SphereGeometry(0.62, 32, 20), toon('coral'), 0.045);
+        hoodie.scale.set(1.08, 0.6, 0.7); hoodie.position.y = -0.7; g.add(hoodie);
+        var chipGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.05, 28); chipGeo.rotateX(Math.PI / 2);
+        var chip = mesh(chipGeo, toon('lantern'), 0.025); chip.position.set(-0.24, -0.52, 0.36); chip.rotation.x = -0.35; g.add(chip);
+        var bTex = canvasTex(128, 128, function (x, w, h) {
+          x.font = '400 104px "Lilita One", "Arial Black", system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+          x.fillStyle = hex('navy'); x.fillText('B', w / 2, h / 2 + 6);
+        });
+        var bLabel = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.24), new THREE.MeshBasicMaterial({ map: bTex, transparent: true, depthWrite: false }));
+        bLabel.position.z = 0.035; chip.add(bLabel);
+
+        // Hodet i egen gruppe, så det kan nikke og følge musepekeren
+        var head = new THREE.Group(); head.position.y = 0.14; head.scale.setScalar(1.14); g.add(head);
+        head.add(mesh(new THREE.SphereGeometry(0.42, 36, 24), skin, 0.045));
+        [-1, 1].forEach(function (sx) {
+          var ear = mesh(new THREE.SphereGeometry(0.1, 16, 12), skin, 0.03); ear.scale.z = 0.5; ear.position.set(sx * 0.42, -0.02, 0); head.add(ear);
+        });
+        var hair = mesh(new THREE.SphereGeometry(0.445, 32, 16, 0, TAU, 0, Math.PI * 0.4), toon('hair'), 0.035);
+        hair.rotation.x = -0.35; hair.position.y = 0.02; head.add(hair);
+        var tuft = mesh(new THREE.ConeGeometry(0.1, 0.24, 14), toon('hair'), 0.03); tuft.position.set(0.06, 0.46, 0.08); tuft.rotation.z = -0.5; head.add(tuft);
+        // Surt ansikt: senkede, skrå øyenbryn, halvlukkede øyelokk, rynket munn og røde kinn
+        var eyes = [], pupils = [], brows = [], lids = [], cheeks = [];
+        var cheekMat = toon('coral', { transparent: true, opacity: 0.55, depthWrite: false });
+        [-1, 1].forEach(function (sx) {
+          var e = new THREE.Mesh(new THREE.SphereGeometry(0.085, 18, 12), white); e.scale.z = 0.5; e.position.set(sx * 0.15, 0.03, 0.37); head.add(e); eyes.push(e);
+          var p = new THREE.Mesh(new THREE.SphereGeometry(0.036, 12, 8), ink); p.position.set(sx * 0.15, 0.015, 0.41); p.userData.base = sx * 0.15; head.add(p); pupils.push(p);
+          var lid = new THREE.Mesh(new THREE.SphereGeometry(0.092, 18, 10, 0, TAU, 0, Math.PI / 2), skin);
+          lid.scale.z = 0.58; lid.position.set(sx * 0.15, 0.03, 0.372); lid.rotation.z = sx * 0.28; lid.rotation.x = 0.55; head.add(lid);
+          lid.userData.base = 0.55; lid.userData.sx = sx; lids.push(lid);
+          var ring = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.022, 8, 28), ink); ring.position.set(sx * 0.15, 0.03, 0.41); head.add(ring);
+          var b = mesh(new THREE.BoxGeometry(0.19, 0.055, 0.05), toon('hair'), 0.015);
+          b.position.set(sx * 0.16, 0.16, 0.42); b.rotation.z = sx * 0.42; b.userData.base = 0.16; b.userData.rot = sx * 0.42; head.add(b); brows.push(b);
+          var ch = new THREE.Mesh(new THREE.SphereGeometry(0.07, 14, 10), cheekMat); ch.scale.set(1.3, 0.7, 0.3); ch.position.set(sx * 0.25, -0.1, 0.34); head.add(ch); cheeks.push(ch);
+          var crease = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.012, 0.01), toon('skinShade'));
+          crease.position.set(sx * 0.03, 0.2, 0.41); crease.rotation.z = sx * 1.1; head.add(crease);
+        });
+        var bridge = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.02, 0.02), ink); bridge.position.set(0, 0.05, 0.42); head.add(bridge);
+        var nose = mesh(new THREE.SphereGeometry(0.065, 14, 10), toon('skinShade'), 0.02); nose.scale.set(1, 0.9, 1); nose.position.set(0, -0.07, 0.42); head.add(nose);
+        var mouth = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.022, 8, 20, Math.PI), ink);
+        mouth.position.set(0.02, -0.215, 0.37); mouth.rotation.z = 0.12; mouth.scale.set(1, 0.7, 1); head.add(mouth);
+        var chin = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.012, 0.01), toon('skinShade')); chin.position.set(0.02, -0.29, 0.35); head.add(chin);
+        var puffs = [-1, 1].map(function (sx) {
+          return [0, 1].map(function (i) {
+            var pf = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }));
+            pf.userData.sx = sx; pf.userData.phase = i * 0.5; head.add(pf); return pf;
+          });
+        }).reduce(function (a, b) { return a.concat(b); }, []);
+        var glint = sprite(glintTex); glint.position.set(-0.2, 0.12, 0.5); head.add(glint);
+
+        // Kaffekoppen
+        var mug = new THREE.Group();
+        mug.add(mesh(new THREE.CylinderGeometry(0.15, 0.13, 0.26, 24), white, 0.03));
+        var band = new THREE.Mesh(new THREE.TorusGeometry(0.145, 0.025, 8, 28), toon('lantern')); band.rotation.x = Math.PI / 2; mug.add(band);
+        var handle = mesh(new THREE.TorusGeometry(0.07, 0.025, 8, 16, Math.PI), white, 0.02); handle.position.x = 0.15; handle.rotation.z = -Math.PI / 2; mug.add(handle);
+        var coffeeGeo = new THREE.CircleGeometry(0.13, 24); coffeeGeo.rotateX(-Math.PI / 2);
+        var coffee = new THREE.Mesh(coffeeGeo, toon('coffee')); coffee.position.y = 0.125; mug.add(coffee);
+        var hand = mesh(new THREE.SphereGeometry(0.1, 16, 12), white, 0.03); hand.position.set(-0.13, -0.04, 0.08); mug.add(hand);
+        var steam = [0, 1, 2].map(function (i) {
+          var st = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, depthWrite: false }));
+          st.position.set(0, 0.2, 0); st.userData.phase = i / 3; mug.add(st); return st;
+        });
+        var mugHome = new THREE.Vector3(0.46, -0.44, 0.4);
+        mug.position.copy(mugHome); mug.scale.setScalar(1.25); g.add(mug);
+
+        g.position.y = 0.02;
+        g.userData = { head: head, eyes: eyes, pupils: pupils, brows: brows, lids: lids, cheeks: cheeks, cheekMat: cheekMat,
+          puffs: puffs, skin: skin, mouth: mouth, mug: mug, mugHome: mugHome, coffee: coffee, steam: steam, glint: glint,
+          scale: 1.02, cups: 1 };
+        return g;
+      },
+
       lantern: function () {
         var outer = new THREE.Group(), swing = new THREE.Group(), g = new THREE.Group(), frame = toon('white');
         var top = mesh(new THREE.TorusGeometry(0.09, 0.03, 8, 20), frame, 0.02); top.position.y = 0.62; g.add(top);
@@ -1042,7 +1118,7 @@
       function gesture(t) {
         gest.rotation.set(0, 0, 0); gest.position.set(0, 0, 0); gest.scale.setScalar(1);
         var u = emblem.userData, g0 = age - 0.55;
-        if (g0 < 0) return;
+        if (g0 < 0 && kind.gesture !== 'bjarne') return;
         var loop = function (period) { return idle ? g0 % period : Math.min(g0, period - 0.001); };
         switch (kind.gesture) {
           case 'wag': {           // "Nei, nei!" – tommelen vifter og dupper
@@ -1152,6 +1228,62 @@
             u.q.scale.setScalar(Math.max(0.001, blip(ck - 0.3, 2.2) > 0 ? Math.min(1, (ck - 0.3) * 5) * (1 + 0.15 * Math.sin(t * 8)) : 0));
             break;
           }
+          case 'bjarne': {        // Sur Bjarne: glaner, grynter, rister på hodet og drikker kaffe uten å bli blidere
+            var cj = t % 7, pt = stage.pointer, noCoffee = u.cups <= 0;
+            var fury = noCoffee ? 1 : 0.35 + 0.25 * blip(cj - 1, 1.3);       // hvor sint han er akkurat nå
+            var grunt = blip(cj - 5.6, 0.9);                                  // «hmpf»: rister på hodet
+            u.head.rotation.y += ((pt.inside ? pt.x * 0.35 : Math.sin(t * 0.5) * 0.12) - u.head.rotation.y) * 0.1;
+            u.head.rotation.y += Math.sin(t * 22) * 0.12 * grunt;
+            u.head.rotation.x += ((pt.inside ? -pt.y * 0.2 : 0.08) - u.head.rotation.x) * 0.1;
+            u.head.rotation.z = Math.sin(t * 1.1) * 0.04 * idle + (noCoffee ? Math.sin(t * 40) * 0.015 : 0);
+            // Blunk og glaning
+            var blink = (t % 4.3) < 0.12 ? 1 : 0;
+            u.lids.forEach(function (l) {
+              l.rotation.x = blink ? 1.45 : l.userData.base + 0.35 * fury;
+              l.rotation.z = l.userData.sx * (0.3 + 0.15 * fury);
+            });
+            u.pupils.forEach(function (p) {
+              p.position.x = p.userData.base + (pt.inside ? pt.x * 0.035 : 0.025 * Math.sin(t * 0.7));
+              p.position.y = 0.01 + (pt.inside ? pt.y * 0.02 : -0.005);
+              p.visible = !blink;
+            });
+            // Øyenbryn: skrå og senket, det høyre løftes skeptisk innimellom («om du tør»)
+            var sneer = noCoffee ? 0 : blip(cj - 2.4, 1.1);
+            u.brows.forEach(function (br, n) {
+              var sx = n === 0 ? -1 : 1;
+              br.rotation.z = br.userData.rot * (1 + 0.35 * fury) - (n === 1 ? sneer * 0.75 : 0);
+              br.position.y = br.userData.base - 0.03 * fury + (n === 1 ? 0.08 * sneer : 0) + Math.sin(t * 30) * 0.006 * grunt;
+              br.position.x = sx * (0.16 - 0.02 * fury);
+            });
+            // Munnen: sur bue, blir bare flat etter en slurk
+            var sip = u.cups > 0 ? blip(cj - 3.2, 1.6) : 0, sm = Math.min(1, sip * 1.6);
+            var relief = blip(cj - 4.7, 0.9);
+            u.mouth.scale.set(1 - 0.15 * fury + 0.1 * relief, Math.max(0.15, 0.7 + 0.25 * fury - 0.55 * relief), 1);
+            u.mouth.rotation.z = 0.12 + 0.1 * Math.sin(t * 1.7) * idle;
+            // Røde kinn og damp ut av ørene når det koker
+            u.cheekMat.opacity = 0.25 + 0.55 * fury;
+            u.skin.emissive.set(hex('coral')).multiplyScalar(noCoffee ? 0.28 + 0.12 * Math.sin(t * 6) : 0.04 * fury);
+            var steaming = noCoffee || grunt > 0;
+            u.puffs.forEach(function (pf) {
+              var k = (t * 0.9 + pf.userData.phase) % 1;
+              pf.position.set(pf.userData.sx * (0.5 + k * 0.25), 0.02 + k * 0.3, 0);
+              pf.scale.setScalar(0.5 + k * 1.3);
+              pf.material.opacity = steaming ? 0.75 * (1 - k) : 0;
+            });
+            // Kaffe
+            u.mug.position.set(u.mugHome.x - 0.2 * sm, u.mugHome.y + 0.36 * sm, u.mugHome.z + 0.08 * sm);
+            u.mug.rotation.z = 0.7 * sm + (noCoffee ? 0.15 * Math.sin(t * 3) : 0);
+            u.steam.forEach(function (st) {
+              var k = (t * 0.6 + st.userData.phase) % 1;
+              st.visible = u.cups > 0 && sm < 0.2;
+              st.position.set(Math.sin(k * 9 + st.userData.phase * 5) * 0.04, 0.18 + k * 0.35, 0);
+              st.scale.setScalar(0.6 + k); st.material.opacity = 0.6 * (1 - k);
+            });
+            u.coffee.visible = u.cups > 0;
+            var gl = blip(t % 5 - 2, 0.5);
+            u.glint.visible = gl > 0; u.glint.scale.set(gl * 0.3, gl * 0.3, 1);
+            break;
+          }
           case 'heartbeat': {
             var cb = loop(1.1);
             gest.scale.setScalar(1 + 0.2 * blip(cb, 0.18) + 0.12 * blip(cb - 0.24, 0.16));
@@ -1225,6 +1357,7 @@
         pop: pop,
         show: function () { sp.target = 1; return api; },
         hide: function () { sp.target = 0; return api; },
+        emblem: function () { return emblem; },
         setKind: function (k) { if (BADGE_KINDS[k]) { kindKey = k; applyKind(); pop(); } return api; },
         dispose: function () { comps.delete(comp); stage.dispose(); root.remove(); }
       };

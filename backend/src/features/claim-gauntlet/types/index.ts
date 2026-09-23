@@ -10,12 +10,14 @@ export type ClaimGauntletRequest = {
   history: ClaimGauntletHistoryEntry[];
   personaId: BjarnePersonaId;
   currentScore?: number;
+  exhaustionScore?: number;
 };
 
 export type ClaimGauntletResponse = {
   personaId: BjarnePersonaId;
   reply: string;
   annoyanceScore: number;
+  exhaustionScore: number;
   resolved: boolean;
 };
 

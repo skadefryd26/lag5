@@ -10,12 +10,18 @@ async function main() {
     "Bilen min fikk en skrape på parkeringsplassen i går.",
     [],
     0,
+    100,
     "bureaucrat",
   );
   console.log("Bjarnes svar:", JSON.stringify(result, null, 2));
 
-  if (!result.reply || typeof result.annoyanceScore !== "number" || result.personaId !== "bureaucrat") {
-    console.error("Smoketest feilet: mangler reply, annoyanceScore eller personaId.");
+  if (
+    !result.reply ||
+    typeof result.annoyanceScore !== "number" ||
+    typeof result.exhaustionScore !== "number" ||
+    result.personaId !== "bureaucrat"
+  ) {
+    console.error("Smoketest feilet: mangler svar, scorer eller persona.");
     process.exit(1);
   }
 

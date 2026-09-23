@@ -95,6 +95,7 @@ export function ClaimGauntletScreen() {
 
   function handleSubmit() {
     if (!draft.trim()) return;
+    if (draft.trim() === "Meld skade nå!!!") faceRef.current?.showQrBadge();
     hudRef.current?.onSend();
     sendMessage(draft.trim());
     setDraft("");

@@ -4,6 +4,7 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   Group,
   Paper,
   Progress,
@@ -40,6 +41,7 @@ export function ClaimGauntletScreen() {
     annoyanceScore,
     exhaustionScore,
     resolved,
+    suggestions,
     sendMessage,
     restart,
     isSending,
@@ -54,6 +56,12 @@ export function ClaimGauntletScreen() {
     if (!draft.trim()) return;
     hudRef.current?.onSend();
     sendMessage(draft.trim());
+    setDraft("");
+  }
+
+  function handleSuggestionClick(suggestion: string) {
+    hudRef.current?.onSend();
+    sendMessage(suggestion);
     setDraft("");
   }
 
@@ -152,27 +160,44 @@ export function ClaimGauntletScreen() {
           <Button onClick={restart} variant="light" color="orange">Meld en ny skade (om du orker)</Button>
         </Stack>
       ) : (
-        <Group align="flex-end">
-          <Textarea
-            flex={1}
-            size="lg"
-            placeholder="Beskriv skaden din, om du tør…"
-            autosize
-            minRows={2}
-            maxRows={5}
-            value={draft}
-            onChange={(e) => setDraft(e.currentTarget.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit();
-              }
-            }}
-          />
-          <Button size="lg" onClick={handleSubmit} loading={isSending} color="orange">
-            Send til Bjarne
-          </Button>
-        </Group>
+        <Stack gap="xs">
+          {suggestions.length > 0 && !isSending && (
+            <Group gap="xs">
+              {suggestions.map((suggestion, i) => (
+                <Chip
+                  key={i}
+                  variant="light"
+                  color="orange"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  style={{ cursor: "pointer" }}
+                >
+                  {suggestion}
+                </Chip>
+              ))}
+            </Group>
+          )}
+          <Group align="flex-end">
+            <Textarea
+              flex={1}
+              size="lg"
+              placeholder="Beskriv skaden din, om du tør…"
+              autosize
+              minRows={2}
+              maxRows={5}
+              value={draft}
+              onChange={(e) => setDraft(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
+            />
+            <Button size="lg" onClick={handleSubmit} loading={isSending} color="orange">
+              Send til Bjarne
+            </Button>
+          </Group>
+        </Stack>
       )}
     </Box>
   );

@@ -15,4 +15,5 @@ export type ClaimGauntletResponse = {
   annoyanceScore: number;
   exhaustionScore: number;
   resolved: boolean;
+  suggestions: string[];
 };

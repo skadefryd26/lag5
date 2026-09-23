@@ -3,6 +3,8 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { sendClaimMessage } from "../api/claimGauntletApi";
 import type { ClaimGauntletHistoryEntry } from "../types";
 
+const STARTING_EXHAUSTION_SCORE = 100;
+
 type DisplayMessage = {
   role: "user" | "bjarne";
   text: string;
@@ -26,6 +28,7 @@ function pickImpatienceLine(round: number): string {
 export function useClaimGauntlet() {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [annoyanceScore, setAnnoyanceScore] = useState(0);
+  const [exhaustionScore, setExhaustionScore] = useState(STARTING_EXHAUSTION_SCORE);
   const [resolved, setResolved] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(ROUND_SECONDS);
   const timeoutRoundRef = useRef(0);
@@ -33,7 +36,12 @@ export function useClaimGauntlet() {
   const mutation = useMutation({
     mutationFn: (message: string) => {
       const history: ClaimGauntletHistoryEntry[] = messages;
-      return sendClaimMessage({ message, history, currentScore: annoyanceScore });
+      return sendClaimMessage({
+        message,
+        history,
+        currentScore: annoyanceScore,
+        exhaustionScore,
+      });
     },
     onSuccess: (result, message) => {
       setMessages((prev) => [
@@ -42,6 +50,7 @@ export function useClaimGauntlet() {
         { role: "bjarne", text: result.reply },
       ]);
       setAnnoyanceScore(result.annoyanceScore);
+      setExhaustionScore(result.exhaustionScore);
       setResolved(result.resolved);
       setSecondsLeft(ROUND_SECONDS);
       timeoutRoundRef.current = 0;
@@ -53,12 +62,13 @@ export function useClaimGauntlet() {
       if (!message.trim() || resolved) return;
       mutation.mutate(message);
     },
-    [mutation, resolved],
+    [annoyanceScore, exhaustionScore, messages, mutation, resolved],
   );
 
   const restart = useCallback(() => {
     setMessages([]);
     setAnnoyanceScore(0);
+    setExhaustionScore(STARTING_EXHAUSTION_SCORE);
     setResolved(false);
     setSecondsLeft(ROUND_SECONDS);
     timeoutRoundRef.current = 0;
@@ -89,6 +99,7 @@ export function useClaimGauntlet() {
   return {
     messages,
     annoyanceScore,
+    exhaustionScore,
     resolved,
     sendMessage,
     restart,

@@ -10,11 +10,16 @@ async function main() {
     "Bilen min fikk en skrape på parkeringsplassen i går.",
     [],
     0,
+    100,
   );
   console.log("Bjarnes svar:", JSON.stringify(result, null, 2));
 
-  if (!result.reply || typeof result.annoyanceScore !== "number") {
-    console.error("Smoketest feilet: mangler reply eller annoyanceScore.");
+  if (
+    !result.reply ||
+    typeof result.annoyanceScore !== "number" ||
+    typeof result.exhaustionScore !== "number"
+  ) {
+    console.error("Smoketest feilet: mangler reply eller score.");
     process.exit(1);
   }
 

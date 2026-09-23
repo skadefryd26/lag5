@@ -1,6 +1,6 @@
 export type ScoreAdjustments = {
   annoyanceScore?: number;
-  exhaustionScore?: number;
+  energyScore?: number;
 };
 
 let pendingAdjustments: ScoreAdjustments = {};
@@ -9,8 +9,8 @@ export function setAnnoyanceScore(score: number): void {
   pendingAdjustments.annoyanceScore = score;
 }
 
-export function setExhaustionScore(score: number): void {
-  pendingAdjustments.exhaustionScore = score;
+export function setEnergyScore(score: number): void {
+  pendingAdjustments.energyScore = score;
 }
 
 export function takeScoreAdjustments(): ScoreAdjustments {

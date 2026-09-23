@@ -2,7 +2,7 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3001";
 
 export type ScoreAdjustments = {
   annoyanceScore?: number;
-  exhaustionScore?: number;
+  energyScore?: number;
 };
 
 export async function adjustScores(scores: ScoreAdjustments): Promise<void> {

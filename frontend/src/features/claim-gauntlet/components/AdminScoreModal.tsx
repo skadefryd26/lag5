@@ -9,14 +9,14 @@ type AdminScoreModalProps = {
 
 export function AdminScoreModal({ opened, onClose }: AdminScoreModalProps) {
   const [annoyanceScore, setAnnoyanceScore] = useState<number | string>("");
-  const [exhaustionScore, setExhaustionScore] = useState<number | string>("");
+  const [energyScore, setEnergyScore] = useState<number | string>("");
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (opened) {
       setAnnoyanceScore("");
-      setExhaustionScore("");
+      setEnergyScore("");
       setError(null);
     }
   }, [opened]);
@@ -24,7 +24,7 @@ export function AdminScoreModal({ opened, onClose }: AdminScoreModalProps) {
   async function handleSubmit() {
     const scores = {
       ...(annoyanceScore !== "" ? { annoyanceScore: Number(annoyanceScore) } : {}),
-      ...(exhaustionScore !== "" ? { exhaustionScore: Number(exhaustionScore) } : {}),
+      ...(energyScore !== "" ? { energyScore: Number(energyScore) } : {}),
     };
 
     if (Object.keys(scores).length === 0) {
@@ -60,13 +60,13 @@ export function AdminScoreModal({ opened, onClose }: AdminScoreModalProps) {
           onChange={setAnnoyanceScore}
         />
         <NumberInput
-          label="exhaustionScore"
+          label="energyScore"
           placeholder="0–100"
           min={0}
           max={100}
           allowDecimal={false}
-          value={exhaustionScore}
-          onChange={setExhaustionScore}
+          value={energyScore}
+          onChange={setEnergyScore}
         />
         {error && <Text c="red" size="sm">{error}</Text>}
         <Group justify="flex-end">

@@ -25,16 +25,16 @@ claimGauntletRouter.post("/", async (req: Request, res: Response) => {
   const currentScore =
     adjustments.annoyanceScore ??
     (typeof body.currentScore === "number" ? body.currentScore : 0);
-  const exhaustionScore =
-    adjustments.exhaustionScore ??
-    (typeof body.exhaustionScore === "number" ? body.exhaustionScore : 100);
+  const energyScore =
+    adjustments.energyScore ??
+    (typeof body.energyScore === "number" ? body.energyScore : 100);
 
   try {
     const result: ClaimGauntletResponse = await askBjarne(
       body.message,
       history,
       currentScore,
-      exhaustionScore,
+      energyScore,
       body.personaId,
     );
     res.json(result);

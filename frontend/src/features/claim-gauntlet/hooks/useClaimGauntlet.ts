@@ -4,7 +4,7 @@ import { sendClaimMessage } from "../api/claimGauntletApi";
 import { pickRandomPersona } from "../personas";
 import type { ClaimGauntletHistoryEntry } from "../types";
 
-const STARTING_EXHAUSTION_SCORE = 100;
+const STARTING_ENERGY_SCORE = 100;
 
 type DisplayMessage = {
   role: "user" | "bjarne";
@@ -33,12 +33,12 @@ export function useClaimGauntlet() {
   const [persona, setPersona] = useState(initialGame.persona);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [annoyanceScore, setAnnoyanceScore] = useState(0);
-  const [exhaustionScore, setExhaustionScore] = useState(STARTING_EXHAUSTION_SCORE);
+  const [energyScore, setEnergyScore] = useState(STARTING_ENERGY_SCORE);
   const [resolved, setResolved] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [secondsLeft, setSecondsLeft] = useState(initialGame.secondsLeft);
   const timeoutRoundRef = useRef(0);
-  const exhaustionScoreRef = useRef(STARTING_EXHAUSTION_SCORE);
+  const energyScoreRef = useRef(STARTING_ENERGY_SCORE);
 
   const mutation = useMutation({
     mutationFn: (message: string) => {
@@ -48,7 +48,7 @@ export function useClaimGauntlet() {
         history,
         personaId: persona.id,
         currentScore: annoyanceScore,
-        exhaustionScore,
+        energyScore,
       });
     },
     onSuccess: (result, message) => {
@@ -58,8 +58,8 @@ export function useClaimGauntlet() {
         { role: "bjarne", text: result.reply },
       ]);
       setAnnoyanceScore(result.annoyanceScore);
-      setExhaustionScore(result.exhaustionScore);
-      exhaustionScoreRef.current = result.exhaustionScore;
+      setEnergyScore(result.energyScore);
+      energyScoreRef.current = result.energyScore;
       setResolved(result.resolved);
       setSuggestions(result.suggestions ?? []);
       setSecondsLeft(persona.rules.roundSeconds);
@@ -73,7 +73,7 @@ export function useClaimGauntlet() {
       setSuggestions([]);
       mutation.mutate(message);
     },
-    [mutation, resolved],
+    [energyScore, mutation, resolved],
   );
 
   const restart = useCallback(() => {
@@ -81,8 +81,8 @@ export function useClaimGauntlet() {
     setPersona(nextPersona);
     setMessages([]);
     setAnnoyanceScore(0);
-    setExhaustionScore(STARTING_EXHAUSTION_SCORE);
-    exhaustionScoreRef.current = STARTING_EXHAUSTION_SCORE;
+    setEnergyScore(STARTING_ENERGY_SCORE);
+    energyScoreRef.current = STARTING_ENERGY_SCORE;
     setResolved(false);
     setSuggestions([]);
     setSecondsLeft(nextPersona.rules.roundSeconds);
@@ -104,13 +104,13 @@ export function useClaimGauntlet() {
         const line = pickImpatienceLine(timeoutRoundRef.current - 1);
         setMessages((msgs) => [...msgs, { role: "bjarne", text: line }]);
         setAnnoyanceScore((score) => score + persona.rules.timeoutAnnoyancePenalty);
-        const nextExhaustionScore = Math.max(
+        const nextEnergyScore = Math.max(
           0,
-          exhaustionScoreRef.current - persona.rules.timeoutExhaustionPenalty,
+          energyScoreRef.current - persona.rules.timeoutExhaustionPenalty,
         );
-        exhaustionScoreRef.current = nextExhaustionScore;
-        setExhaustionScore(nextExhaustionScore);
-        if (nextExhaustionScore === 0) setResolved(true);
+        energyScoreRef.current = nextEnergyScore;
+        setEnergyScore(nextEnergyScore);
+        if (nextEnergyScore === 0) setResolved(true);
         setSuggestions([]);
         return persona.rules.roundSeconds;
       });
@@ -123,7 +123,7 @@ export function useClaimGauntlet() {
     messages,
     persona,
     annoyanceScore,
-    exhaustionScore,
+    energyScore,
     resolved,
     suggestions,
     sendMessage,

@@ -32,6 +32,7 @@ export function useClaimGauntlet() {
   const [annoyanceScore, setAnnoyanceScore] = useState(0);
   const [exhaustionScore, setExhaustionScore] = useState(STARTING_EXHAUSTION_SCORE);
   const [resolved, setResolved] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [secondsLeft, setSecondsLeft] = useState(ROUND_SECONDS);
   const timeoutRoundRef = useRef(0);
 
@@ -55,6 +56,7 @@ export function useClaimGauntlet() {
       setAnnoyanceScore(result.annoyanceScore);
       setExhaustionScore(result.exhaustionScore);
       setResolved(result.resolved);
+      setSuggestions(result.suggestions ?? []);
       setSecondsLeft(ROUND_SECONDS);
       timeoutRoundRef.current = 0;
     },
@@ -63,6 +65,7 @@ export function useClaimGauntlet() {
   const sendMessage = useCallback(
     (message: string) => {
       if (!message.trim() || resolved) return;
+      setSuggestions([]);
       mutation.mutate(message);
     },
     [mutation, resolved],
@@ -74,6 +77,7 @@ export function useClaimGauntlet() {
     setAnnoyanceScore(0);
     setExhaustionScore(STARTING_EXHAUSTION_SCORE);
     setResolved(false);
+    setSuggestions([]);
     setSecondsLeft(ROUND_SECONDS);
     timeoutRoundRef.current = 0;
     mutation.reset();
@@ -93,6 +97,7 @@ export function useClaimGauntlet() {
         const line = pickImpatienceLine(timeoutRoundRef.current - 1);
         setMessages((msgs) => [...msgs, { role: "bjarne", text: line }]);
         setAnnoyanceScore((score) => score + TIMEOUT_PENALTY);
+        setSuggestions([]);
         return ROUND_SECONDS;
       });
     }, 1000);
@@ -106,6 +111,7 @@ export function useClaimGauntlet() {
     annoyanceScore,
     exhaustionScore,
     resolved,
+    suggestions,
     sendMessage,
     restart,
     isSending: mutation.isPending,

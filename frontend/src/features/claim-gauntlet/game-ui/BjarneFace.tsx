@@ -57,7 +57,7 @@ export const BjarneFace = forwardRef<BjarneFaceHandle, BjarneFaceProps>(function
       {showQr ? (
         // "Meld skade nå!!!" — kunden skal ikke kunne overse hintet. Litt
         // mindre enn boksen, siden merkets navnelapp stikker ut til sidene.
-        <qr-merke size={`${Math.round(size * 0.6)}px`} text="MELD SKADE NÅ!!!" />
+        <qr-merke size={`${Math.round(size * 0.6)}px`} text="Vipps" />
       ) : (
         <iframe
           ref={iframeRef}

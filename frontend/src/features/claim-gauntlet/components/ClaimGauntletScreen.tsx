@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import {
   Alert,
   Avatar,
-  Badge,
   Box,
   Button,
   Group,
@@ -15,18 +15,18 @@ import {
   Title,
 } from "@mantine/core";
 import { useClaimGauntlet } from "../hooks/useClaimGauntlet";
+import { BjarneFace, type BjarneFaceHandle } from "../game-ui/BjarneFace";
+import { GameHud, type GameHudHandle } from "../game-ui/GameHud";
 
-function scoreColor(score: number): string {
-  if (score >= 12) return "red";
-  if (score >= 6) return "orange";
-  return "yellow";
-}
+function vignetteIntensity(secondsLeft: number, roundSeconds: number) {
+  const ratio = secondsLeft / roundSeconds;
+  if (ratio > 0.5) return null;
 
-function scoreLabel(score: number): string {
-  if (score >= 12) return "Bjarne vurderer å legge på røret";
-  if (score >= 6) return "Bjarne sukker hørbart";
-  if (score >= 1) return "Bjarne løfter et øyebryn";
-  return "Bjarne later som han hører etter";
+  const pulseDuration = 0.5 + ratio * 3.4;
+  const maxOpacity = 0.35 + (1 - ratio) * 0.55;
+  const minOpacity = maxOpacity * 0.35;
+
+  return { pulseDuration, maxOpacity, minOpacity };
 }
 
 export function ClaimGauntletScreen() {
@@ -40,38 +40,87 @@ export function ClaimGauntletScreen() {
     restart,
     isSending,
     error,
+    secondsLeft,
+    roundSeconds,
   } = useClaimGauntlet();
+  const faceRef = useRef<BjarneFaceHandle>(null);
+  const hudRef = useRef<GameHudHandle>(null);
 
   function handleSubmit() {
     if (!draft.trim()) return;
+    hudRef.current?.onSend();
     sendMessage(draft.trim());
     setDraft("");
   }
 
+  const vignette = resolved ? null : vignetteIntensity(secondsLeft, roundSeconds);
+
+  useEffect(() => {
+    if (isSending) faceRef.current?.setExpression("tenkende");
+  }, [isSending]);
+
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (last?.role === "bjarne") {
+      faceRef.current?.reactTo(last.text);
+      hudRef.current?.onReply(annoyanceScore, resolved);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
+
   return (
-    <Box maw={720} mx="auto" py="xl" px="md">
-      <Group justify="space-between" align="flex-start" mb="md">
-        <Group>
-          <Avatar color="dark" radius="xl" size="lg">
-            B
-          </Avatar>
-          <div>
-            <Title order={2} c="orange.6">
-              Bjarnes Erstatningsprøvelse
-            </Title>
-            <Text size="sm" c="dimmed">
-              Meld en skade. Om du tør.
-            </Text>
-          </div>
-        </Group>
-        <Badge color={scoreColor(annoyanceScore)} size="lg" variant="filled">
-          Irritasjonsscore: {annoyanceScore}
-        </Badge>
+    <Box maw={900} mx="auto" py="xl" px="md">
+      {vignette && (
+        <div
+          className="claim-gauntlet-vignette"
+          style={
+            {
+              animationDuration: `${vignette.pulseDuration}s`,
+              "--vignette-min-opacity": vignette.minOpacity,
+              "--vignette-max-opacity": vignette.maxOpacity,
+            } as CSSProperties
+          }
+        />
+      )}
+      <Group mb="md">
+        <Avatar color="dark" radius="xl" size="lg">B</Avatar>
+        <div>
+          <Title order={2} c="orange.6">Bjarnes Erstatningsprøvelse</Title>
+          <Text size="sm" c="dimmed">Meld en skade. Om du tør.</Text>
+        </div>
       </Group>
 
-      <Text size="sm" c="dimmed" mb="xs">
-        {scoreLabel(annoyanceScore)}
-      </Text>
+      <Group align="stretch" wrap="nowrap" gap="md" mb="xs">
+        <Paper withBorder radius="md" p="md" bg="dark.8" style={{ flex: 1, minWidth: 0 }}>
+          <ScrollArea h={360} type="auto">
+            <Stack gap="sm">
+              {messages.length === 0 && (
+                <Text c="dimmed" fs="italic">Bjarne har ikke sukket ennå. Skriv skademeldingen din under.</Text>
+              )}
+              {messages.map((m, i) => (
+                <Paper
+                  key={i}
+                  p="sm"
+                  radius="md"
+                  bg={m.role === "bjarne" ? "dark.6" : "blue.9"}
+                  style={{ alignSelf: m.role === "bjarne" ? "flex-start" : "flex-end", maxWidth: "85%" }}
+                >
+                  <Text size="xs" c="dimmed" mb={4}>{m.role === "bjarne" ? "Bjarne" : "Deg"}</Text>
+                  <Text>{m.text}</Text>
+                </Paper>
+              ))}
+              {isSending && (
+                <Paper p="sm" radius="md" bg="dark.6" style={{ alignSelf: "flex-start" }}>
+                  <Text size="xs" c="dimmed" mb={4}>Bjarne</Text>
+                  <Text fs="italic" c="dimmed">… sukker og later som han leser meldingen din …</Text>
+                </Paper>
+              )}
+            </Stack>
+          </ScrollArea>
+        </Paper>
+
+        <BjarneFace ref={faceRef} size={280} />
+      </Group>
 
       <Box mb="md">
         <Group justify="space-between" mb={4}>
@@ -81,46 +130,10 @@ export function ClaimGauntletScreen() {
         <Progress value={exhaustionScore} color={exhaustionScore <= 25 ? "red" : "orange"} />
       </Box>
 
-      <Paper withBorder radius="md" p="md" mb="md" bg="dark.8">
-        <ScrollArea h={360} type="auto">
-          <Stack gap="sm">
-            {messages.length === 0 && (
-              <Text c="dimmed" fs="italic">
-                Bjarne har ikke sukket ennå. Skriv skademeldingen din under.
-              </Text>
-            )}
-            {messages.map((m, i) => (
-              <Paper
-                key={i}
-                p="sm"
-                radius="md"
-                bg={m.role === "bjarne" ? "dark.6" : "blue.9"}
-                style={{ alignSelf: m.role === "bjarne" ? "flex-start" : "flex-end", maxWidth: "85%" }}
-              >
-                <Text size="xs" c="dimmed" mb={4}>
-                  {m.role === "bjarne" ? "Bjarne" : "Deg"}
-                </Text>
-                <Text>{m.text}</Text>
-              </Paper>
-            ))}
-            {isSending && (
-              <Paper p="sm" radius="md" bg="dark.6" style={{ alignSelf: "flex-start" }}>
-                <Text size="xs" c="dimmed" mb={4}>
-                  Bjarne
-                </Text>
-                <Text fs="italic" c="dimmed">
-                  … sukker og later som han leser meldingen din …
-                </Text>
-              </Paper>
-            )}
-          </Stack>
-        </ScrollArea>
-      </Paper>
+      <GameHud ref={hudRef} />
 
       {error && (
-        <Alert color="red" mb="md" title="Bjarne har gitt helt opp">
-          {error.message}
-        </Alert>
+        <Alert color="red" mb="md" title="Bjarne har gitt helt opp">{error.message}</Alert>
       )}
 
       {resolved ? (
@@ -130,9 +143,7 @@ export function ClaimGauntletScreen() {
               ? "Bjarne ga opp, godtok skademeldingen aggressivt, og du vant."
               : "Bjarne godtok skademeldingen din. Motvillig."}
           </Text>
-          <Button onClick={restart} variant="light" color="orange">
-            Meld en ny skade (om du orker)
-          </Button>
+          <Button onClick={restart} variant="light" color="orange">Meld en ny skade (om du orker)</Button>
         </Stack>
       ) : (
         <Group align="flex-end">
@@ -151,9 +162,7 @@ export function ClaimGauntletScreen() {
               }
             }}
           />
-          <Button onClick={handleSubmit} loading={isSending} color="orange">
-            Send til Bjarne
-          </Button>
+          <Button onClick={handleSubmit} loading={isSending} color="orange">Send til Bjarne</Button>
         </Group>
       )}
     </Box>

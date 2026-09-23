@@ -1,0 +1,90 @@
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { Group } from "@mantine/core";
+
+export type GameHudHandle = {
+  /** Kalles når en melding sendes: starter to-sekunders-teller til timeglass-badgen. */
+  onSend: () => void;
+  /** Kalles når Bjarne har svart: avbryter tellingen, oppdaterer sliden og popper detektiv-badgen. */
+  onReply: (score: number, resolved: boolean) => void;
+};
+
+/**
+ * Slider (irritasjonsmåler) med to badges ved siden av, fra Gjensidiges spill-UI-bibliotek
+ * (three.js). Plasseres mellom dialogboksen og inputfeltet.
+ */
+export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
+  const barContainerRef = useRef<HTMLDivElement>(null);
+  const waitingCellRef = useRef<HTMLDivElement>(null);
+  const detectiveCellRef = useRef<HTMLDivElement>(null);
+  const apiRef = useRef<{
+    bar: GgGameUiBarApi | null;
+    waiting: GgGameUiBadgeApi | null;
+    detective: GgGameUiBadgeApi | null;
+  }>({ bar: null, waiting: null, detective: null });
+  const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.GjensidigeGameUI) return;
+    const ui = window.GjensidigeGameUI(window.THREE, { palette: { navy: "#060948" } });
+
+    if (barContainerRef.current) {
+      apiRef.current.bar = ui.createStatBar(barContainerRef.current, {
+        kind: "frustration",
+        label: "Bjarnes irritasjon",
+        value: 0,
+      });
+    }
+    if (waitingCellRef.current) {
+      apiRef.current.waiting = ui.createBadge(waitingCellRef.current, {
+        kind: "waiting",
+        autoPop: false,
+      });
+      apiRef.current.waiting.el.style.visibility = "hidden";
+    }
+    if (detectiveCellRef.current) {
+      apiRef.current.detective = ui.createBadge(detectiveCellRef.current, {
+        kind: "detective",
+        autoPop: false,
+      });
+    }
+
+    return () => {
+      if (waitTimerRef.current) clearTimeout(waitTimerRef.current);
+      apiRef.current.bar?.dispose();
+      apiRef.current.waiting?.dispose();
+      apiRef.current.detective?.dispose();
+      apiRef.current = { bar: null, waiting: null, detective: null };
+    };
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    onSend() {
+      if (waitTimerRef.current) clearTimeout(waitTimerRef.current);
+      waitTimerRef.current = setTimeout(() => {
+        const el = apiRef.current.waiting?.el;
+        if (el) el.style.visibility = "visible";
+        apiRef.current.waiting?.pop();
+      }, 2000);
+    },
+    onReply(score: number, resolved: boolean) {
+      if (waitTimerRef.current) {
+        clearTimeout(waitTimerRef.current);
+        waitTimerRef.current = null;
+      }
+      const el = apiRef.current.waiting?.el;
+      if (el) el.style.visibility = "hidden";
+
+      apiRef.current.bar?.setValue(Math.min(1, score / 15));
+      apiRef.current.detective?.pop();
+      if (resolved) apiRef.current.bar?.setValue(0);
+    },
+  }));
+
+  return (
+    <Group align="center" gap="md" my="md" wrap="nowrap">
+      <div ref={barContainerRef} style={{ maxWidth: 360, flex: 1 }} />
+      <div ref={waitingCellRef} style={{ width: 84, flexShrink: 0 }} />
+      <div ref={detectiveCellRef} style={{ width: 84, flexShrink: 0 }} />
+    </Group>
+  );
+});

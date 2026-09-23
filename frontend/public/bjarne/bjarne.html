@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bjarne</title>
+<style>
+@font-face{
+  font-family:'Bricolage Grotesque';
+  src:url('/fonts/bricolage-grotesque.woff2') format('woff2');
+  font-weight:500 800;
+  font-style:normal;
+  font-display:swap;
+}
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --stage:#060b2e;
+  --ink:#231a16;
+  --panel:rgba(255,252,246,.9);
+  --text:#231a16;
+  --muted:#6b5f55;
+  --chip:#fffaf2;
+  --chip-ink:#231a16;
+  --edge:#231a16;
+  --on:#231a16;
+  --on-ink:#fffaf2;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --panel:rgba(30,26,23,.9); --text:#f6efe6; --muted:#b9ada2;
+    --chip:#2c2622; --chip-ink:#f6efe6; --edge:#0d0a09; --on:#f6efe6; --on-ink:#231a16;
+  }
+}
+:root[data-theme="dark"]{
+  --panel:rgba(30,26,23,.9); --text:#f6efe6; --muted:#b9ada2;
+  --chip:#2c2622; --chip-ink:#f6efe6; --edge:#0d0a09; --on:#f6efe6; --on-ink:#231a16;
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  background:var(--stage);
+  transition:background-color .7s ease;
+  font-family:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  color:var(--text);
+  overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+}
+#stage{position:fixed;left:0;right:0;top:0;bottom:0}
+#stage canvas{display:block;width:100%;height:100%;touch-action:none}
+
+/* Denne filen brukes bare embedded (se BjarneFace.tsx) — kontrollpanelet og
+   navnelappen skal aldri vises der, så de er skjult fra første paint, uten
+   noen brøkdels sekunds kappløp mot JavaScripten som ellers skjuler dem. */
+.tag, .topright, #panel{display:none !important}
+
+.tag{
+  position:fixed;top:0;left:0;
+  padding:calc(env(safe-area-inset-top,0px) + 16px) 20px 0 calc(env(safe-area-inset-left,0px) + 20px);
+  pointer-events:none;color:var(--ink);
+}
+.tag .name{font-weight:800;font-size:clamp(28px,5vw,44px);line-height:1;letter-spacing:-.02em}
+.tag .mood{margin-top:6px;font-size:17px;font-weight:500;opacity:.8}
+
+.topright{
+  position:fixed;top:0;right:0;
+  padding:calc(env(safe-area-inset-top,0px) + 16px) calc(env(safe-area-inset-right,0px) + 16px) 0 0;
+  display:flex;gap:8px;
+}
+
+button,.chip{
+  font:inherit;font-weight:700;font-size:15px;
+  color:var(--chip-ink);background:var(--chip);
+  border:2px solid var(--edge);border-radius:12px;
+  padding:8px 12px;cursor:pointer;
+  box-shadow:3px 3px 0 var(--edge);
+  transition:transform .08s ease, box-shadow .08s ease, background-color .15s;
+}
+button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--edge)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #2f6fed;outline-offset:2px}
+.chip[aria-pressed="true"]{background:var(--on);color:var(--on-ink)}
+.chip kbd{font:inherit;font-size:11px;font-weight:500;opacity:.55;margin-left:6px}
+
+#panel{
+  position:fixed;left:0;right:0;bottom:0;
+  background:var(--panel);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-top:2px solid var(--edge);
+  padding:14px calc(env(safe-area-inset-right,0px) + 16px) calc(env(safe-area-inset-bottom,0px) + 14px) calc(env(safe-area-inset-left,0px) + 16px);
+  transition:transform .35s cubic-bezier(.2,.8,.2,1);
+  max-height:60vh;overflow-y:auto;
+}
+#panel.hidden{transform:translateY(105%)}
+.groups{display:flex;gap:18px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}
+.group{flex:none}
+.group h2{font-size:14px;font-weight:700;margin:0 0 8px;color:var(--muted)}
+.group .chips{display:flex;flex-wrap:wrap;gap:8px;max-width:330px}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin-top:12px}
+.say{display:flex;gap:8px;flex:1 1 280px;min-width:0}
+.say input{
+  flex:1;min-width:0;font:inherit;font-size:16px;padding:8px 12px;
+  border:2px solid var(--edge);border-radius:12px;background:var(--chip);color:var(--chip-ink);
+}
+.opt{display:flex;align-items:center;gap:6px;font-weight:500;font-size:15px;white-space:nowrap}
+.opt input[type=range]{width:110px}
+.swatches{display:flex;gap:6px;align-items:center}
+.sw{width:26px;height:26px;border-radius:50%;padding:0;border:2px solid var(--edge);box-shadow:2px 2px 0 var(--edge)}
+.sw[aria-pressed="true"]{outline:3px solid var(--text);outline-offset:2px}
+input[type=color]{width:32px;height:30px;border:2px solid var(--edge);border-radius:8px;padding:0;background:none;cursor:pointer}
+details{margin-top:12px;font-size:14px}
+summary{cursor:pointer;font-weight:700}
+pre{
+  margin:8px 0 0;padding:10px 12px;border-radius:10px;border:2px solid var(--edge);
+  background:var(--chip);overflow-x:auto;font-size:13px;line-height:1.5;
+}
+@media (prefers-reduced-motion: reduce){
+  body,#panel{transition:none}
+}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<div class="tag"><div class="name">Bjarne</div><div class="mood" id="mood">nøytral</div></div>
+<div class="topright"><button id="toggleUi" aria-expanded="true">Skjul panel</button></div>
+
+<section id="panel" aria-label="Styr Bjarne">
+  <div class="groups" id="groups"></div>
+  <div class="controls">
+    <div class="say">
+      <input id="sayInput" type="text" placeholder="Si noe til Bjarne, f.eks. «Hvorfor det?»" aria-label="Si noe til Bjarne">
+      <button id="sayBtn">Si det</button>
+    </div>
+    <label class="opt"><input type="checkbox" id="auto"> Bytt av seg selv</label>
+    <label class="opt"><input type="checkbox" id="follow"> Følg pekeren</label>
+    <label class="opt">Overgang <input type="range" id="speed" min="200" max="1500" step="50" value="650"></label>
+    <div class="swatches" id="swatches" aria-label="Bakgrunnsfarge"></div>
+  </div>
+  <details>
+    <summary>Styr Bjarne utenfra</summary>
+<pre>// Fra samme side eller konsollen
+Bjarne.sett('skeptisk');           // valgfri varighet: Bjarne.sett('sint', 400)
+Bjarne.tolk('Hvorfor det?');        // gjetter uttrykk ut fra tekst
+Bjarne.parametre({ browLY: 1, mSkew: 0.8 });  // finjuster enkeltverdier
+Bjarne.bakgrunn('#3fb6a8');
+Bjarne.uttrykk                      // liste over alle uttrykk
+
+// Fra en side som har Bjarne i en iframe
+iframe.contentWindow.postMessage({ uttrykk: 'rasende' }, '*');
+iframe.contentWindow.postMessage({ tekst: 'Hæ?' }, '*');
+
+// Via adressen
+bjarne.html#uttrykk=undrende&amp;bg=7c8cf8&amp;ui=0</pre>
+  </details>
+</section>
+
+<script src="/bjarne/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ---------- Hjelpere ---------- */
+const clamp01 = v => Math.min(1, Math.max(0, v));
+const lerp = (a,b,t) => a + (b-a)*t;
+const SX = 1.0, SY = 1.13, SZ = 0.97;           // hodets ellipsoide
+function surfZ(x,y){ const v = 1 - (x/SX)**2 - (y/SY)**2; return SZ*Math.sqrt(Math.max(v,0)); }
+function norm(s){ return String(s||'').toLowerCase().replace(/æ/g,'ae').replace(/ø/g,'o').replace(/å/g,'a').replace(/[^a-z]/g,''); }
+
+/* ---------- Uttrykk ---------- */
+// L = venstre side av skjermen, R = høyre. A > 0 = indre ende ned (sint), A < 0 = indre ende opp (bekymret/undrende)
+const N0 = {
+  browLY:0, browRY:0, browLA:0, browRA:0,
+  lidL:0.15, lidR:0.15, lowL:0, lowR:0,
+  lookX:0, lookY:0, pupil:1,
+  mW:0.26, mOpen:0, mSmile:0.15, mSkew:0, mX:0, mRound:0, teeth:0, tongue:0,
+  headX:0, headY:0, headZ:0,
+  red:0, blush:0.15, nose:0, sweat:0, shake:0, sym:0
+};
+const EXPR = {
+  skeptisk:  {navn:'Skeptisk',  gruppe:'Skeptisk', p:{browLY:1,browLA:-0.25,browRY:-0.35,browRA:0.45,lidL:0.05,lidR:0.5,lowR:0.35,lookX:-0.35,mW:0.22,mSmile:-0.1,mSkew:0.7,mX:0.07,nose:0.35,headY:0.18,headZ:-0.08,headX:0.05}},
+  mistenksom:{navn:'Mistenksom',gruppe:'Skeptisk', p:{browLY:-0.35,browRY:-0.35,browLA:0.35,browRA:0.35,lidL:0.6,lidR:0.6,lowL:0.45,lowR:0.45,lookX:0.85,lookY:-0.05,mW:0.17,mSmile:-0.25,mSkew:-0.35,mX:0.05,headY:-0.3,headX:0.1,headZ:0.04}},
+  tvilende:  {navn:'Tvilende',  gruppe:'Skeptisk', p:{browLY:-0.2,browLA:0.2,browRY:0.8,browRA:-0.15,lidL:0.4,lidR:0.1,lookX:0.35,lookY:0.35,mW:0.2,mSmile:-0.35,mSkew:-0.5,mX:-0.09,headX:-0.12,headZ:0.1,headY:-0.1}},
+  irritert:  {navn:'Irritert',  gruppe:'Sint', sym:'vein', p:{browLY:-0.3,browRY:-0.3,browLA:0.5,browRA:0.5,lidL:0.4,lidR:0.4,lowL:0.2,lowR:0.2,mW:0.2,mSmile:-0.45,mSkew:0.2,red:0.15,nose:0.25,headX:0.08}},
+  sint:      {navn:'Sint',      gruppe:'Sint', sym:'vein', p:{browLY:-0.55,browRY:-0.55,browLA:0.85,browRA:0.85,lidL:0.3,lidR:0.3,lowL:0.35,lowR:0.35,pupil:0.8,mW:0.3,mOpen:0.11,teeth:1,mSmile:-0.55,red:0.45,nose:0.55,headX:0.18,shake:0.15,blush:0}},
+  rasende:   {navn:'Rasende',   gruppe:'Sint', sym:'vein', p:{browLY:-0.7,browRY:-0.7,browLA:1,browRA:1,lidL:0.15,lidR:0.15,lowL:0.25,lowR:0.25,pupil:0.55,mW:0.36,mOpen:0.38,teeth:1,mSmile:-0.8,red:1,nose:0.8,headX:0.12,shake:1,blush:0}},
+  undrende:  {navn:'Undrende',  gruppe:'Undrende', p:{browLY:0.75,browRY:0.75,browLA:-0.55,browRA:-0.55,lidL:0,lidR:0,lookX:0.35,lookY:0.75,mW:0.12,mOpen:0.1,mRound:1,mSmile:0,headZ:0.14,headX:-0.14}},
+  tenkende:  {navn:'Tenkende',  gruppe:'Undrende', sym:'...', p:{browLY:0.7,browLA:-0.3,browRY:-0.15,browRA:0.2,lidL:0.1,lidR:0.35,lookX:-0.7,lookY:0.8,mW:0.16,mSkew:0.55,mX:-0.1,mSmile:-0.1,headZ:-0.16,headX:-0.1,headY:-0.12}},
+  forbauset: {navn:'Forbauset', gruppe:'Undrende', sym:'!', p:{browLY:1,browRY:1,browLA:-0.2,browRA:-0.2,lidL:0,lidR:0,pupil:0.7,mW:0.16,mOpen:0.34,mRound:0.85,mSmile:0,headX:-0.16}},
+  sporrende: {navn:'Spørrende', gruppe:'Spørrende', sym:'?', p:{browLY:1,browLA:-0.35,browRY:0,browRA:0.15,lidL:0,lidR:0.3,lookX:0.2,lookY:0.1,mW:0.18,mOpen:0.04,mSkew:-0.45,mX:0.06,headZ:0.3,headY:0.08}},
+  forvirret: {navn:'Forvirret', gruppe:'Spørrende', sym:'??', p:{browLY:0.8,browLA:-0.4,browRY:-0.3,browRA:0.4,lidL:0.05,lidR:0.35,lookX:-0.3,lookY:0.35,mW:0.22,mSmile:-0.25,mSkew:0.7,mOpen:0.03,headZ:-0.22,headY:0.1,sweat:1}},
+  hae:       {navn:'Hæ?',       gruppe:'Spørrende', sym:'?', p:{browLY:0.85,browLA:-0.15,browRY:-0.45,browRA:0.45,lidL:0,lidR:0.45,lowR:0.2,mW:0.19,mOpen:0.17,mSmile:-0.35,mSkew:-0.3,headY:0.4,headZ:0.12,headX:0.06,nose:0.2}},
+  noytral:   {navn:'Nøytral',   gruppe:'Annet', p:{}},
+  fornoyd:   {navn:'Fornøyd',   gruppe:'Annet', p:{mSmile:0.9,mW:0.32,mOpen:0.05,lidL:0.3,lidR:0.3,lowL:0.35,lowR:0.35,browLY:0.25,browRY:0.25,blush:0.6,headZ:0.06,headX:-0.05}},
+  oppgitt:   {navn:'Oppgitt',   gruppe:'Annet', p:{browLY:0.35,browRY:0.35,browLA:-0.25,browRA:-0.25,lidL:0.5,lidR:0.5,lookX:0.3,lookY:1,mW:0.25,mSmile:-0.3,mSkew:0.25,headX:-0.12,headZ:0.1}},
+  leiseg:    {navn:'Lei seg',   gruppe:'Annet', p:{browLY:0.2,browRY:0.2,browLA:-0.85,browRA:-0.85,lidL:0.45,lidR:0.45,lookY:-0.45,mW:0.2,mSmile:-0.75,headX:0.18,blush:0}},
+  grimase:   {navn:'Grimase',   gruppe:'Annet', p:{browLY:-0.35,browLA:0.2,browRY:0.7,browRA:-0.2,lidL:0.95,lowL:0.4,lidR:0.05,mW:0.24,mOpen:0.1,tongue:1,mSkew:0.3,mSmile:0.2,headZ:0.15,blush:0.5}}
+};
+const ALIAS = {
+  neutral:'noytral', happy:'fornoyd', glad:'fornoyd', skeptical:'skeptisk', suspicious:'mistenksom', doubtful:'tvilende',
+  annoyed:'irritert', angry:'sint', furious:'rasende', wondering:'undrende', curious:'undrende', thinking:'tenkende',
+  surprised:'forbauset', overrasket:'forbauset', questioning:'sporrende', confused:'forvirret', what:'hae', huh:'hae',
+  eyeroll:'oppgitt', sad:'leiseg', trist:'leiseg', tongue:'grimase', silly:'grimase'
+};
+function resolve(name){
+  const n = norm(name);
+  if (EXPR[n]) return n;
+  if (ALIAS[n]) return ALIAS[n];
+  for (const k in EXPR) if (norm(EXPR[k].navn) === n) return k;
+  return null;
+}
+
+/* ---------- Scene ---------- */
+const stageEl = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+renderer.setClearColor(0x000000, 0);
+stageEl.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+scene.add(new THREE.AmbientLight(0xffffff, 0.52));
+const sun = new THREE.DirectionalLight(0xffffff, 0.62); sun.position.set(2.5, 3.2, 4); scene.add(sun);
+
+function toonMap(){
+  const d = new Uint8Array([95,95,95,255, 185,185,185,255, 255,255,255,255]);
+  const t = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat);
+  t.minFilter = t.magFilter = THREE.NearestFilter; t.generateMipmaps = false; t.needsUpdate = true;
+  return t;
+}
+const grad = toonMap();
+const toon = c => new THREE.MeshToonMaterial({color:new THREE.Color(c), gradientMap:grad});
+const basic = (c, extra) => new THREE.MeshBasicMaterial(Object.assign({color:new THREE.Color(c)}, extra||{}));
+
+const SKIN = new THREE.Color('#f1b48e'), SKIN_RED = new THREE.Color('#e5584a');
+const NOSE = new THREE.Color('#e98f78'), NOSE_RED = new THREE.Color('#c9362e');
+const skinMat = toon(SKIN); skinMat.side = THREE.DoubleSide;
+const noseMat = toon(NOSE);
+const earInMat = toon('#dc8f72');
+const hairMat = toon('#7b6655');
+const browMat = toon('#4a372b');
+const whiteMat = toon('#fbf8f2');
+const irisMat = toon('#4d8fb8');
+const pupilMat = basic('#17110f');
+const outlineMat = basic('#231a16', {side:THREE.BackSide});
+const lineMat = basic('#231a16');
+
+function ell(mat, sx, sy, sz, seg){
+  seg = seg || 32;
+  const m = new THREE.Mesh(new THREE.SphereGeometry(1, seg, Math.round(seg*0.75)), mat);
+  m.scale.set(sx, sy, sz); return m;
+}
+function outline(mesh, t){
+  t = t || 0.025;
+  mesh.geometry.computeBoundingSphere();
+  const r = mesh.geometry.boundingSphere.radius, s = mesh.scale;
+  const o = new THREE.Mesh(mesh.geometry, outlineMat);
+  o.scale.set(1 + t/(r*s.x), 1 + t/(r*s.y), 1 + t/(r*s.z));
+  mesh.add(o); return o;
+}
+
+const root = new THREE.Group(); scene.add(root);
+const head = new THREE.Group(); root.add(head);
+
+// Hodeskalle
+const skull = ell(skinMat, SX, SY, SZ, 64); head.add(skull); outline(skull, 0.04);
+
+// Ører
+for (const s of [-1,1]){
+  const ear = ell(skinMat, 0.14, 0.26, 0.2); ear.position.set(s*0.97, 0.02, -0.05); ear.rotation.y = s*0.3;
+  head.add(ear); outline(ear, 0.03);
+  const inner = ell(earInMat, 0.05, 0.15, 0.1); inner.position.set(s*1.07, 0.02, 0.0); inner.rotation.y = s*0.3;
+  head.add(inner);
+}
+
+// Nese
+const noseBaseY = -0.1, noseBaseZ = surfZ(0, -0.1) + 0.06;
+const nose = ell(noseMat, 0.2, 0.18, 0.2); nose.position.set(0, noseBaseY, noseBaseZ);
+head.add(nose); outline(nose, 0.03);
+const shine = ell(basic('#ffffff', {transparent:true, opacity:0.55}), 0.22, 0.16, 0.08);
+shine.position.set(0.3, 0.38, 0.86); nose.add(shine);
+
+// Øyne
+const eyes = [];
+for (const s of [-1,1]){
+  const x = s*0.3, y = 0.16;
+  const g = new THREE.Group(); g.position.set(x, y, surfZ(x,y) - 0.1); head.add(g);
+  const ball = ell(whiteMat, 0.2, 0.2, 0.2); g.add(ball); outline(ball, 0.022);
+  const look = new THREE.Group(); g.add(look);
+  const iris = ell(irisMat, 0.1, 0.1, 0.03); iris.position.z = 0.185; look.add(iris);
+  const pupil = ell(pupilMat, 0.055, 0.055, 0.02); pupil.position.z = 0.2; look.add(pupil);
+  const spark = ell(basic('#ffffff'), 0.022, 0.022, 0.01); spark.position.set(0.035, 0.04, 0.212); look.add(spark);
+  const tilt = new THREE.Group(); g.add(tilt);
+  const up = new THREE.Mesh(new THREE.SphereGeometry(0.228, 32, 16, 0, Math.PI*2, 0, Math.PI/2), skinMat); tilt.add(up);
+  const upLine = new THREE.Mesh(new THREE.TorusGeometry(0.228, 0.014, 6, 48), lineMat); upLine.rotation.x = Math.PI/2; up.add(upLine);
+  const lo = new THREE.Mesh(new THREE.SphereGeometry(0.224, 32, 16, 0, Math.PI*2, Math.PI/2, Math.PI/2), skinMat); tilt.add(lo);
+  const loLine = new THREE.Mesh(new THREE.TorusGeometry(0.224, 0.008, 6, 48), lineMat); loLine.rotation.x = Math.PI/2; lo.add(loLine);
+  eyes.push({s, side: s<0 ? 'L' : 'R', look, pupil, tilt, up, lo});
+}
+
+// Øyenbryn
+const brows = [];
+for (const s of [-1,1]){
+  const b = ell(browMat, 0.175, 0.055, 0.065); head.add(b); outline(b, 0.022);
+  brows.push({s, side: s<0 ? 'L' : 'R', m:b});
+}
+
+// Rynker: panne og sinnefure
+const wrinkleMat = basic('#8a4b35', {transparent:true, opacity:0, depthWrite:false});
+const furrowMat = basic('#8a4b35', {transparent:true, opacity:0, depthWrite:false});
+function surfTube(pts2, off, r, mat){
+  const pts = pts2.map(p => new THREE.Vector3(p[0], p[1], surfZ(p[0], p[1]) + off));
+  return new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, r, 5, false), mat);
+}
+for (let j=0;j<2;j++){
+  const y0 = 0.7 + j*0.1, pts = [];
+  for (let i=0;i<=8;i++){ const x = -0.32 + i*0.08; pts.push([x, y0 - 0.05*(x/0.32)**2 + 0.012*Math.sin(i*1.7)]); }
+  head.add(surfTube(pts, 0.004, 0.009, wrinkleMat));
+}
+for (const s of [-1,1]){
+  head.add(surfTube([[s*0.035,0.34],[s*0.045,0.41],[s*0.06,0.48]], 0.004, 0.009, furrowMat));
+}
+
+// Rødme i kinnene
+const blushMat = basic('#ff6f7d', {transparent:true, opacity:0, depthWrite:false});
+for (const s of [-1,1]){
+  const x = s*0.52, y = -0.18;
+  const b = ell(blushMat, 0.13, 0.075, 0.03); b.position.set(x, y, surfZ(x,y) + 0.004); b.rotation.y = s*0.55;
+  head.add(b);
+}
+
+// Bart
+const stache = new THREE.Group(); const stacheBaseZ = surfZ(0, -0.3) + 0.05;
+stache.position.set(0, -0.3, stacheBaseZ); head.add(stache);
+const stacheHalves = [];
+for (const s of [-1,1]){
+  const m = ell(hairMat, 0.2, 0.072, 0.09); m.position.x = s*0.15; stache.add(m); outline(m, 0.024);
+  stacheHalves.push({s, m});
+}
+
+// Hårkrans
+const rows = [{y:0.42, from:1.2, to:5.08, n:15, s:0.19}, {y:0.12, from:2.0, to:4.28, n:7, s:0.2}];
+for (const r of rows){
+  const ring = Math.sqrt(1 - (r.y/SY)**2);
+  for (let i=0;i<r.n;i++){
+    const phi = r.from + (r.to - r.from)*i/(r.n-1);
+    const t = ell(hairMat, r.s*(0.9 + 0.25*((i*37)%5)/5), r.s*0.8, r.s);
+    t.position.set(SX*ring*Math.sin(phi)*0.97, r.y + 0.04*Math.sin(i*2.3), SZ*ring*Math.cos(phi)*0.97);
+    t.rotation.y = phi; head.add(t); outline(t, 0.025);
+  }
+}
+
+// Krøll på toppen
+const curlPivot = new THREE.Group(); curlPivot.position.set(0.02, SY - 0.03, 0.05); head.add(curlPivot);
+const curl = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.03, 10, 40, Math.PI*1.5), hairMat);
+curl.position.set(0, 0.1, 0); curlPivot.add(curl);
+curl.add(new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.048, 10, 40, Math.PI*1.5), outlineMat));
+
+// Svettedråpe
+const sweatMat = toon('#8fd3ff');
+const sweat = new THREE.Group(); sweat.position.set(-0.8, 0.52, surfZ(-0.8, 0.52) + 0.06); head.add(sweat);
+const dropBall = ell(sweatMat, 0.07, 0.07, 0.07); sweat.add(dropBall); outline(dropBall, 0.018);
+const dropTip = new THREE.Mesh(new THREE.ConeGeometry(0.066, 0.13, 20), sweatMat); dropTip.position.y = 0.085; sweat.add(dropTip); outline(dropTip, 0.018);
+
+// Tunge (rakt ut)
+const tongueMat = toon('#e0707a');
+const tongueOut = ell(tongueMat, 0.1, 0.13, 0.06); head.add(tongueOut); outline(tongueOut, 0.022);
+
+// Munn: bygges på nytt hver ramme ut fra parametrene
+const mouthMats = {
+  inside: basic('#3d1418', {side:THREE.DoubleSide}),
+  tongue: basic('#e0707a', {side:THREE.DoubleSide}),
+  teeth:  basic('#fffaf0', {side:THREE.DoubleSide}),
+  lip:    basic('#4a1f1c')
+};
+const mouth = {};
+for (const k of ['inside','tongue','teethU','teethL','lip']){
+  const mat = k.startsWith('teeth') ? mouthMats.teeth : mouthMats[k];
+  mouth[k] = new THREE.Mesh(new THREE.BufferGeometry(), mat); head.add(mouth[k]);
+}
+function fillGeo(pts, off){
+  const tris = THREE.ShapeUtils.triangulateShape(pts, []);
+  const pos = new Float32Array(pts.length*3);
+  pts.forEach((p,i) => { pos[i*3]=p.x; pos[i*3+1]=p.y; pos[i*3+2]=surfZ(p.x,p.y)+off; });
+  const idx = []; tris.forEach(t => idx.push(t[0], t[1], t[2]));
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setIndex(idx);
+  return g;
+}
+function setGeo(mesh, g){ mesh.geometry.dispose(); mesh.geometry = g; }
+const MN = 24, MOUTH_Y = -0.56;
+let mouthCenterLow = new THREE.Vector2(0, MOUTH_Y);
+function buildMouth(p){
+  const round = clamp01(p.mRound), open = Math.max(0, p.mOpen);
+  const w = Math.max(0.06, p.mW*(1 - 0.45*round)), k = 1 - 0.5*round, cx = p.mX;
+  const U = [], L = [];
+  for (let i=0;i<=MN;i++){
+    const u = -1 + 2*i/MN, bell = Math.pow(Math.max(0, 1-u*u), k);
+    const cy = MOUTH_Y + p.mSmile*0.1*u*u + p.mSkew*0.075*u;
+    const gap = 0.014 + open;
+    U.push(new THREE.Vector2(cx + u*w, cy + gap*0.3*bell));
+    L.push(new THREE.Vector2(cx + u*w, cy - gap*0.7*bell - Math.max(0, p.mSmile)*open*0.25*bell));
+  }
+  mouthCenterLow.set(L[MN/2].x, L[MN/2].y);
+  const contour = U.concat(L.slice(1, MN).reverse());
+  setGeo(mouth.inside, fillGeo(contour, 0.006));
+
+  const teeth = clamp01(p.teeth), tg = clamp01(p.tongue);
+  // Tunge inne i munnen
+  if (open > 0.06 && tg < 0.4){
+    const tops = [];
+    for (let i=1;i<MN;i++){ const u = -1 + 2*i/MN; const th = Math.min(0.08, (U[i].y-L[i].y)*0.4)*Math.sqrt(1-u*u); tops.push(new THREE.Vector2(L[i].x, L[i].y + th)); }
+    setGeo(mouth.tongue, fillGeo(L.concat(tops.reverse()), 0.009)); mouth.tongue.visible = true;
+  } else mouth.tongue.visible = false;
+  // Tenner
+  if (teeth > 0.02 && open > 0.02){
+    const bu = [], tl = [];
+    for (let i=1;i<MN;i++){
+      const gap = U[i].y - L[i].y;
+      bu.push(new THREE.Vector2(U[i].x, U[i].y - Math.min(0.075*teeth, gap*0.46)));
+      tl.push(new THREE.Vector2(L[i].x, L[i].y + Math.min(0.05*teeth, gap*0.4)));
+    }
+    setGeo(mouth.teethU, fillGeo(U.concat(bu.reverse()), 0.012));
+    setGeo(mouth.teethL, fillGeo(L.concat(tl.reverse()), 0.012));
+    mouth.teethU.visible = mouth.teethL.visible = true;
+  } else mouth.teethU.visible = mouth.teethL.visible = false;
+  // Leppestrek
+  const pts3 = contour.map(q => new THREE.Vector3(q.x, q.y, surfZ(q.x, q.y) + 0.012));
+  setGeo(mouth.lip, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts3, true, 'centripetal'), 90, 0.018, 6, true));
+}
+
+// Symboler over hodet (?, !, …, sinneåre)
+const symCache = {};
+function symTex(kind){
+  if (symCache[kind]) return symCache[kind];
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d');
+  g.lineJoin = 'round'; g.lineCap = 'round';
+  if (kind === 'vein'){
+    g.translate(128,128);
+    for (let i=0;i<4;i++){
+      g.rotate(Math.PI/2);
+      g.beginPath(); g.moveTo(22,-78); g.quadraticCurveTo(26,-26,78,-22);
+      g.lineWidth = 34; g.strokeStyle = '#231a16'; g.stroke();
+      g.lineWidth = 20; g.strokeStyle = '#e23b3b'; g.stroke();
+    }
+  } else {
+    const size = kind.length > 1 ? (kind === '...' ? 150 : 170) : 210;
+    g.font = `800 ${size}px 'Bricolage Grotesque', system-ui, sans-serif`;
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    const y = kind === '...' ? 110 : 140;
+    g.lineWidth = 22; g.strokeStyle = '#231a16'; g.strokeText(kind, 128, y);
+    g.fillStyle = '#ffffff'; g.fillText(kind, 128, y);
+  }
+  const t = new THREE.CanvasTexture(c);
+  symCache[kind] = t; return t;
+}
+const SYMPOS = {'?':[0.98,1.08,0.3,0.62], '??':[0.98,1.08,0.3,0.72], '!':[0.9,1.15,0.3,0.62], '...':[-0.98,1.02,0.3,0.62], 'vein':[0.52,0.8,0.75,0.4]};
+const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map:symTex('?'), transparent:true, depthTest:false}));
+sprite.renderOrder = 10; head.add(sprite);
+let curSym = '';
+
+// Skygge under hodet
+(function(){
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d'); const rg = g.createRadialGradient(64,64,0,64,64,64);
+  rg.addColorStop(0,'rgba(0,0,0,0.9)'); rg.addColorStop(0.6,'rgba(0,0,0,0.35)'); rg.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle = rg; g.fillRect(0,0,128,128);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.3), new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c), transparent:true, opacity:0.22, depthWrite:false}));
+  m.rotation.x = -Math.PI/2; m.position.y = -1.62; scene.add(m);
+  window.__bjarneShadow = m;
+})();
+const shadow = window.__bjarneShadow;
+
+/* ---------- Tilstand og overganger ---------- */
+const cur = Object.assign({}, N0);
+let from = Object.assign({}, N0), to = Object.assign({}, N0);
+let tStart = 0, tDur = 650, currentName = 'noytral';
+const DELAY = k => k.startsWith('brow') ? 0 : (k.startsWith('lid')||k.startsWith('low')||k.startsWith('look')||k==='pupil') ? 0.06 : (k[0]==='m'||k==='teeth'||k==='tongue') ? 0.12 : k.startsWith('head') ? 0.03 : 0;
+function easeOutBack(x){ const c1 = 1.25, c3 = c1 + 1; return 1 + c3*Math.pow(x-1,3) + c1*Math.pow(x-1,2); }
+
+let clockNow = 0;
+let blinkStart = -1, nextBlink = 2;
+function startBlink(){ blinkStart = clockNow; }
+
+function blendTo(target, ms, sym){
+  from = Object.assign({}, cur);
+  to = Object.assign({}, N0, target);
+  if (sym && sym !== curSym){
+    curSym = sym; sprite.material.map = symTex(sym); sprite.material.needsUpdate = true;
+    cur.sym = 0; from.sym = 0;
+  }
+  to.sym = sym ? 1 : 0;
+  tStart = clockNow; tDur = Math.max(50, ms || speed());
+  if (Math.random() < 0.55) startBlink();
+}
+function setExpression(name, ms){
+  const key = resolve(name);
+  if (!key) { console.warn('Bjarne kjenner ikke uttrykket', name, '– prøv:', Object.keys(EXPR).join(', ')); return false; }
+  currentName = key;
+  const e = EXPR[key];
+  blendTo(e.p, ms, e.sym || '');
+  moodEl.textContent = e.navn.toLowerCase();
+  document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', c.dataset.key === key ? 'true' : 'false'));
+  return true;
+}
+function setParams(obj, ms){
+  const target = Object.assign({}, to);
+  for (const k in obj) if (k in N0 && typeof obj[k] === 'number') target[k] = obj[k];
+  blendTo(target, ms, curSym && to.sym > 0 ? curSym : '');
+  currentName = 'egendefinert'; moodEl.textContent = 'egendefinert';
+  document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed','false'));
+}
+
+/* ---------- Tolke tekst ---------- */
+function tolk(text){
+  const s = String(text||'').toLowerCase().trim();
+  if (!s) return 'noytral';
+  const word = list => new RegExp('(^|[^a-zæøå])(' + list + ')(?=$|[^a-zæøå])').test(s);
+  const has = list => list.split('|').some(w => s.includes(w));
+  if (/!{2,}/.test(s) || word('faen|helvete|jævla|satan|pokker|fy søren|fy faen')) return 'rasende';
+  if (word('hæ|hæææ|hææ|ha|hva') && s.length < 8) return 'hae';
+  if (/\?{2,}/.test(s) || has('skjønner ikke|forstår ikke|forvirr|skjønner null')) return 'forvirret';
+  if (word('wow|oi|jøss|jøje|nei men|oj|oisann')) return 'forbauset';
+  if (word('lei meg|trist|synd|leit|dessverre')) return 'leiseg';
+  if (has('irriter|sint|dust|idiot|teit|slutt med|dumt')) return s.includes('!') ? 'sint' : 'irritert';
+  if (word('tja|neppe|tviler|virkelig|javel|ja vel|jaså|påstår du|sikker på|sikkert')) return 'skeptisk';
+  if (has('mistenk|mistenkelig|hvem der|hva har du gjort')) return 'mistenksom';
+  if (/^h+m+/.test(s) || word('hmm|kanskje|la meg se|tenker|får se')) return 'tenkende';
+  if (has('lurer på|undres|tenk om|mon tro|monn tro|lure på')) return 'undrende';
+  if (word('orker|herregud|seriøst|ugh|æsj|igjen')) return 'oppgitt';
+  if (word('bæ|hehe|nananana|æææ')) return 'grimase';
+  if (word('nei|nope|niks')) return 'tvilende';
+  if (word('takk|bra|flott|fint|kult|hyggelig|herlig|ja|supert|nice')) return 'fornoyd';
+  if (s.includes('?')) return 'sporrende';
+  if (s.includes('!')) return 'forbauset';
+  return 'noytral';
+}
+
+/* ---------- Anvend parametre ---------- */
+let gazeJitter = {x:0, y:0, tx:0, ty:0, next:1};
+const pointer = {x:0, y:0, sx:0, sy:0};
+let curlAngle = 0, curlVel = 0, prevHeadZ = 0, prevHeadY = 0;
+
+function apply(p, t, dt){
+  const follow = followEl.checked;
+  pointer.sx = lerp(pointer.sx, follow ? pointer.x : 0, Math.min(1, dt*6));
+  pointer.sy = lerp(pointer.sy, follow ? pointer.y : 0, Math.min(1, dt*6));
+
+  // Hode
+  const shake = Math.max(0, p.shake);
+  root.position.set(Math.sin(t*47)*0.018*shake, -0.08 + Math.sin(t*1.6)*0.015 + Math.sin(t*39)*0.01*shake, 0);
+  head.rotation.set(
+    p.headX - pointer.sy*0.12 + Math.sin(t*0.9)*0.012,
+    p.headY + pointer.sx*0.28 + Math.sin(t*0.53)*0.02,
+    p.headZ + Math.sin(t*0.7)*0.018 + Math.sin(t*31)*0.02*shake
+  );
+  shadow.scale.set(1 - (root.position.y + 0.08)*1.5, 1, 1);
+
+  // Farge ved sinne
+  const red = clamp01(p.red);
+  skinMat.color.copy(SKIN).lerp(SKIN_RED, red*0.7);
+  noseMat.color.copy(NOSE).lerp(NOSE_RED, red*0.6);
+
+  // Blunk
+  if (t >= nextBlink && blinkStart < 0){ startBlink(); nextBlink = t + 2 + Math.random()*3.5; if (Math.random() < 0.15) nextBlink = t + 0.3; }
+  let blink = 0;
+  if (blinkStart >= 0){ const ph = (t - blinkStart)/0.17; if (ph >= 1) blinkStart = -1; else blink = 1 - Math.abs(ph*2 - 1); }
+
+  // Små blikkbevegelser
+  if (t > gazeJitter.next){ gazeJitter.tx = (Math.random()-0.5)*0.14; gazeJitter.ty = (Math.random()-0.5)*0.1; gazeJitter.next = t + 0.6 + Math.random()*2; }
+  gazeJitter.x = lerp(gazeJitter.x, gazeJitter.tx, Math.min(1, dt*14));
+  gazeJitter.y = lerp(gazeJitter.y, gazeJitter.ty, Math.min(1, dt*14));
+  const gx = p.lookX + gazeJitter.x + pointer.sx*0.9, gy = p.lookY + gazeJitter.y + pointer.sy*0.8;
+
+  for (const e of eyes){
+    const lid = clamp01(p['lid'+e.side]), low = clamp01(p['low'+e.side]);
+    const lidE = lid + (1 - lid)*blink;
+    e.up.rotation.x = -1.3 + lidE*2.82;
+    e.lo.rotation.x = 1.35 - low*1.0;
+    e.tilt.rotation.z = e.s * p['brow'+e.side+'A'] * 0.3;
+    e.look.rotation.y = Math.max(-1.2, Math.min(1.2, gx))*0.5;
+    e.look.rotation.x = -Math.max(-1.2, Math.min(1.2, gy))*0.42;
+    const ps = Math.max(0.4, p.pupil);
+    e.pupil.scale.set(0.055*ps, 0.055*ps, 0.02);
+  }
+
+  for (const b of brows){
+    const Y = p['brow'+b.side+'Y'], A = p['brow'+b.side+'A'];
+    const x = b.s*(0.3 - 0.05*Math.max(0, A)), y = 0.47 + Y*0.13 - Math.max(0, A)*0.03;
+    b.m.position.set(x, y, surfZ(x, y) + 0.03);
+    b.m.rotation.set(-y*0.5, b.s*0.33, b.s*A*0.45 - b.s*0.08);
+  }
+  wrinkleMat.opacity = clamp01((Math.max(p.browLY, p.browRY) - 0.35)*1.6)*0.85;
+  furrowMat.opacity = clamp01((Math.max(p.browLA, p.browRA) - 0.3)*1.8)*0.9;
+  blushMat.opacity = clamp01(p.blush)*0.55;
+
+  // Nese
+  const nz = Math.max(0, p.nose);
+  nose.position.y = noseBaseY + nz*0.035;
+  nose.scale.set(0.2*(1 + nz*0.05), 0.18*(1 - nz*0.08), 0.2);
+
+  // Munn og bart
+  buildMouth(p);
+  stache.position.set(p.mX*0.4, -0.3 + Math.max(0, p.mOpen)*0.07 + nz*0.03, stacheBaseZ);
+  stache.rotation.z = p.mSkew*0.14;
+  for (const h of stacheHalves){ h.m.rotation.set(0, h.s*0.3, -h.s*(0.28 - p.mSmile*0.3)); }
+
+  // Tunge ut
+  const tg = clamp01(p.tongue);
+  tongueOut.visible = tg > 0.03;
+  if (tongueOut.visible){
+    const x = mouthCenterLow.x, y = mouthCenterLow.y - 0.07*tg;
+    tongueOut.position.set(x, y, surfZ(x, y) + 0.03 + 0.03*tg);
+    tongueOut.scale.set(0.1, 0.13*tg, 0.06);
+    tongueOut.rotation.set(0.5, 0, Math.sin(t*5)*0.08*tg);
+  }
+
+  // Svette
+  const sw = clamp01(p.sweat);
+  sweat.visible = sw > 0.02;
+  sweat.scale.setScalar(Math.max(0.001, sw));
+  sweat.position.y = 0.52 - ((t*0.35) % 1)*0.08*sw;
+
+  // Symbol
+  const sy = Math.max(0, p.sym);
+  sprite.visible = sy > 0.02 && curSym !== '';
+  if (sprite.visible){
+    const sp = SYMPOS[curSym] || SYMPOS['?'];
+    const pulse = curSym === 'vein' ? 1 + Math.sin(t*9)*0.08 : 1;
+    sprite.position.set(sp[0], sp[1] + Math.sin(t*2.2)*0.03, sp[2]);
+    sprite.scale.setScalar(sp[3]*sy*pulse);
+    sprite.material.rotation = Math.sin(t*1.7)*0.12;
+    sprite.material.opacity = clamp01(sy*1.5);
+  }
+
+  // Fjærende krøll
+  const hvz = (head.rotation.z - prevHeadZ)/Math.max(dt, 1e-3), hvy = (head.rotation.y - prevHeadY)/Math.max(dt, 1e-3);
+  prevHeadZ = head.rotation.z; prevHeadY = head.rotation.y;
+  const acc = -60*curlAngle - 5*curlVel - hvz*6 - hvy*2;
+  curlVel += acc*dt; curlAngle += curlVel*dt;
+  curlAngle = Math.max(-0.9, Math.min(0.9, curlAngle));
+  curlPivot.rotation.z = curlAngle - 0.15;
+}
+
+/* ---------- UI ---------- */
+const moodEl = document.getElementById('mood');
+const groupsEl = document.getElementById('groups');
+const followEl = document.getElementById('follow');
+const autoEl = document.getElementById('auto');
+const speedEl = document.getElementById('speed');
+const panel = document.getElementById('panel');
+const toggleBtn = document.getElementById('toggleUi');
+function speed(){ return +speedEl.value; }
+
+const KEYS = '1234567890qwertyu';
+const keyMap = {};
+const order = ['Skeptisk','Sint','Undrende','Spørrende','Annet'];
+let ki = 0;
+for (const gName of order){
+  const g = document.createElement('div'); g.className = 'group';
+  const h = document.createElement('h2'); h.textContent = gName; g.appendChild(h);
+  const chips = document.createElement('div'); chips.className = 'chips';
+  for (const key in EXPR){
+    if (EXPR[key].gruppe !== gName) continue;
+    const b = document.createElement('button'); b.className = 'chip'; b.dataset.key = key;
+    b.setAttribute('aria-pressed', key === 'noytral' ? 'true' : 'false');
+    b.textContent = EXPR[key].navn;
+    const k = KEYS[ki++];
+    if (k){ keyMap[k] = key; const kb = document.createElement('kbd'); kb.textContent = k; b.appendChild(kb); b.title = 'Tast ' + k; }
+    b.addEventListener('click', () => setExpression(key));
+    chips.appendChild(b);
+  }
+  g.appendChild(chips); groupsEl.appendChild(g);
+}
+
+const sayInput = document.getElementById('sayInput');
+function say(){ const k = tolk(sayInput.value); setExpression(k); }
+document.getElementById('sayBtn').addEventListener('click', say);
+sayInput.addEventListener('keydown', e => { if (e.key === 'Enter') say(); });
+
+window.addEventListener('keydown', e => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (keyMap[k]) { setExpression(keyMap[k]); e.preventDefault(); }
+  else if (k === ' ') { randomExpression(); e.preventDefault(); }
+  else if (k === 'h') { toggleUi(); }
+});
+
+function randomExpression(){
+  const keys = Object.keys(EXPR).filter(k => k !== currentName);
+  setExpression(keys[Math.floor(Math.random()*keys.length)]);
+}
+let autoTimer = null;
+function scheduleAuto(){
+  clearTimeout(autoTimer);
+  if (!autoEl.checked) return;
+  autoTimer = setTimeout(() => { randomExpression(); scheduleAuto(); }, speed() + 1600 + Math.random()*900);
+}
+autoEl.addEventListener('change', () => { if (autoEl.checked) randomExpression(); scheduleAuto(); });
+
+const SWATCHES = ['#f2c14e','#3fb6a8','#ef6f5e','#7c8cf8','#9bd17a','#e9e4da','#1f2a44'];
+const swEl = document.getElementById('swatches');
+function setBg(c){
+  document.documentElement.style.setProperty('--stage', c);
+  document.querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', b.dataset.c.toLowerCase() === c.toLowerCase() ? 'true' : 'false'));
+  if (colorIn) colorIn.value = /^#[0-9a-f]{6}$/i.test(c) ? c : colorIn.value;
+  // lys eller mørk tekst på navnelappen
+  const m = /^#?([0-9a-f]{6})$/i.exec(c);
+  if (m){ const n = parseInt(m[1],16); const l = (0.299*(n>>16) + 0.587*((n>>8)&255) + 0.114*(n&255))/255;
+    document.documentElement.style.setProperty('--ink', l < 0.45 ? '#fffaf2' : '#231a16'); }
+}
+for (const c of SWATCHES){
+  const b = document.createElement('button'); b.className = 'sw'; b.dataset.c = c; b.style.background = c;
+  b.setAttribute('aria-label', 'Bakgrunn ' + c); b.addEventListener('click', () => setBg(c)); swEl.appendChild(b);
+}
+const colorIn = document.createElement('input'); colorIn.type = 'color'; colorIn.value = SWATCHES[0];
+colorIn.setAttribute('aria-label', 'Velg egen bakgrunnsfarge');
+colorIn.addEventListener('input', () => setBg(colorIn.value)); swEl.appendChild(colorIn);
+
+function toggleUi(force){
+  const hide = typeof force === 'boolean' ? force : !panel.classList.contains('hidden');
+  panel.classList.toggle('hidden', hide);
+  toggleBtn.textContent = hide ? 'Vis panel' : 'Skjul panel';
+  toggleBtn.setAttribute('aria-expanded', hide ? 'false' : 'true');
+  layout();
+}
+toggleBtn.addEventListener('click', () => toggleUi());
+
+renderer.domElement.addEventListener('pointermove', e => {
+  const r = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - r.left)/r.width)*2 - 1;
+  pointer.y = -(((e.clientY - r.top)/r.height)*2 - 1);
+});
+
+/* ---------- Styring utenfra ---------- */
+function handleInput(d){
+  if (d == null) return;
+  if (typeof d === 'string'){ if (!setExpression(d)) setExpression(tolk(d)); return; }
+  if (typeof d !== 'object') return;
+  const ms = d.varighet || d.duration;
+  if (d.uttrykk || d.expression) setExpression(d.uttrykk || d.expression, ms);
+  else if (d.tekst || d.text) setExpression(tolk(d.tekst || d.text), ms);
+  if (d.parametre || d.params) setParams(d.parametre || d.params, ms);
+  if (d.bakgrunn || d.background) setBg(d.bakgrunn || d.background);
+  if (typeof d.ui === 'boolean') toggleUi(!d.ui);
+}
+window.addEventListener('message', e => {
+  const d = e.data;
+  if (d && typeof d === 'object' && d.bjarne !== undefined) handleInput(d.bjarne); else handleInput(d);
+});
+function readAddress(){
+  const raw = (location.hash || '').replace(/^#/, '') + '&' + (location.search || '').replace(/^\?/, '');
+  const q = new URLSearchParams(raw);
+  let name = q.get('uttrykk') || q.get('expression');
+  if (!name){ const first = raw.split('&')[0]; if (first && !first.includes('=')) name = decodeURIComponent(first); }
+  if (name) setExpression(name);
+  const bg = q.get('bg'); if (bg) setBg(bg.startsWith('#') ? bg : '#' + bg);
+  if (q.get('ui') === '0') toggleUi(true);
+}
+window.addEventListener('hashchange', readAddress);
+
+window.Bjarne = {
+  uttrykk: Object.keys(EXPR),
+  sett: setExpression, setExpression: setExpression,
+  tolk: (tekst, ms) => { const k = tolk(tekst); setExpression(k, ms); return k; },
+  parametre: setParams,
+  bakgrunn: setBg,
+  tilfeldig: randomExpression,
+  panel: vis => toggleUi(!vis),
+  get naa(){ return currentName; }
+};
+
+/* ---------- Størrelse ---------- */
+function layout(){
+  const hidden = panel.classList.contains('hidden');
+  stageEl.style.bottom = hidden ? '0px' : panel.offsetHeight + 'px';
+  resize();
+}
+function resize(){
+  const w = stageEl.clientWidth, h = Math.max(1, stageEl.clientHeight);
+  renderer.setSize(w, h, false);
+  camera.aspect = w/h;
+  const tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
+  const dist = Math.max(1.8/tanH, 1.45/(tanH*camera.aspect));
+  camera.position.set(0, 0.2, dist);
+  camera.lookAt(0, 0.02, 0);
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(layout).observe(panel);
+window.addEventListener('resize', layout);
+
+/* ---------- Løkke ---------- */
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.05, (now - last)/1000); last = now;
+  clockNow += dt;
+  const el = (clockNow - tStart)*1000;
+  for (const k in N0){
+    const d = DELAY(k);
+    const kk = clamp01((el/tDur - d)/(1 - d));
+    const e = reduceMotion ? kk : easeOutBack(kk);
+    cur[k] = from[k] + (to[k] - from[k])*e;
+  }
+  apply(cur, clockNow, dt);
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+setBg('#060b2e');
+layout();
+readAddress();
+if (document.fonts && document.fonts.ready){
+  document.fonts.ready.then(() => {
+    for (const k in symCache){ symCache[k].dispose(); delete symCache[k]; }
+    if (curSym){ sprite.material.map = symTex(curSym); sprite.material.needsUpdate = true; }
+  });
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

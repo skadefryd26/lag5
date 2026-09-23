@@ -8,11 +8,19 @@ export type BjarneFaceHandle = {
   setExpression: (expression: string) => void;
 };
 
+type BjarneFaceProps = {
+  size?: number;
+};
+
 /**
  * Bjarnes ansikt, gjengitt i en iframe fra den ferdige three.js-figuren i public/bjarne.
- * Panelet er skjult (ui=0) — vi styrer ansiktet utelukkende med postMessage.
+ * Kontrollpanelet og navnelappen er skjult direkte i selve filen (embed-bruk) — vi styrer
+ * ansiktet utelukkende med postMessage.
  */
-export const BjarneFace = forwardRef<BjarneFaceHandle>(function BjarneFace(_props, ref) {
+export const BjarneFace = forwardRef<BjarneFaceHandle, BjarneFaceProps>(function BjarneFace(
+  { size = 280 },
+  ref,
+) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useImperativeHandle(ref, () => ({
@@ -24,19 +32,10 @@ export const BjarneFace = forwardRef<BjarneFaceHandle>(function BjarneFace(_prop
     },
   }));
 
-  function hideChrome() {
-    const doc = iframeRef.current?.contentDocument;
-    if (!doc || doc.getElementById("ggui-hide-chrome")) return;
-    const style = doc.createElement("style");
-    style.id = "ggui-hide-chrome";
-    style.textContent = ".tag, .topright { display: none !important; }";
-    doc.head.appendChild(style);
-  }
-
   return (
     <Box
-      w={140}
-      h={170}
+      w={size}
+      h={size * 1.15}
       style={{
         flexShrink: 0,
         borderRadius: "var(--mantine-radius-md)",
@@ -47,9 +46,8 @@ export const BjarneFace = forwardRef<BjarneFaceHandle>(function BjarneFace(_prop
     >
       <iframe
         ref={iframeRef}
-        src="/bjarne/bjarne.html?ui=0&bg=060b2e"
+        src="/bjarne/bjarne.html"
         title="Bjarnes ansikt"
-        onLoad={hideChrome}
         style={{ width: "100%", height: "100%", border: "none", pointerEvents: "none" }}
       />
     </Box>

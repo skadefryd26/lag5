@@ -4,15 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Bjarne</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap" rel="stylesheet">
 <style>
+@font-face{
+  font-family:'Bricolage Grotesque';
+  src:url('/fonts/bricolage-grotesque.woff2') format('woff2');
+  font-weight:500 800;
+  font-style:normal;
+  font-display:swap;
+}
 :root{
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
-  --stage:#f2c14e;
+  --stage:#060b2e;
   --ink:#231a16;
   --panel:rgba(255,252,246,.9);
   --text:#231a16;
@@ -46,6 +50,11 @@ body{
 }
 #stage{position:fixed;left:0;right:0;top:0;bottom:0}
 #stage canvas{display:block;width:100%;height:100%;touch-action:none}
+
+/* Denne filen brukes bare embedded (se BjarneFace.tsx) — kontrollpanelet og
+   navnelappen skal aldri vises der, så de er skjult fra første paint, uten
+   noen brøkdels sekunds kappløp mot JavaScripten som ellers skjuler dem. */
+.tag, .topright, #panel{display:none !important}
 
 .tag{
   position:fixed;top:0;left:0;
@@ -147,7 +156,7 @@ bjarne.html#uttrykk=undrende&amp;bg=7c8cf8&amp;ui=0</pre>
   </details>
 </section>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="/bjarne/three.min.js"></script>
 <script>
 (function(){
 'use strict';
@@ -801,7 +810,7 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 
-setBg(SWATCHES[0]);
+setBg('#060b2e');
 layout();
 readAddress();
 if (document.fonts && document.fonts.ready){

@@ -18,7 +18,7 @@ async function main() {
   if (
     !result.reply ||
     typeof result.annoyanceScore !== "number" ||
-    typeof result.exhaustionScore !== "number" ||
+    typeof result.energyScore !== "number" ||
     result.personaId !== "bureaucrat"
   ) {
     console.error("Smoketest feilet: mangler svar, scorer eller persona.");

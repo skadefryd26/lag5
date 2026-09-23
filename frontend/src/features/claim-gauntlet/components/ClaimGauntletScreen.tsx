@@ -78,7 +78,7 @@ export function ClaimGauntletScreen() {
   const {
     messages,
     annoyanceScore,
-    exhaustionScore,
+    energyScore,
     resolved,
     sendMessage,
     restart,
@@ -228,10 +228,10 @@ export function ClaimGauntletScreen() {
 
       <Box mb="md">
         <Group justify="space-between" mb={4}>
-          <Text size="sm" fw={600}>Bjarnes utmattelse</Text>
-          <Text size="sm" c="dimmed">{exhaustionScore}/100</Text>
+          <Text size="sm" fw={600}>Bjarnes energinivå</Text>
+          <Text size="sm" c="dimmed">{energyScore}/100</Text>
         </Group>
-        <Progress value={exhaustionScore} color={exhaustionScore <= 25 ? "red" : "orange"} />
+        <Progress value={energyScore} color={energyScore <= 25 ? "red" : "orange"} />
       </Box>
 
       <GameHud ref={hudRef} />
@@ -243,7 +243,7 @@ export function ClaimGauntletScreen() {
       {resolved ? (
         <Stack align="center" gap="xs">
           <Text fw={700} c="green.5">
-            {exhaustionScore === 0
+            {energyScore === 0
               ? "Bjarne ga opp, godtok skademeldingen aggressivt, og du vant."
               : "Bjarne godtok skademeldingen din. Motvillig."}
           </Text>

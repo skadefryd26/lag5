@@ -19,16 +19,16 @@ Humoren skal handle om situasjonen, forsikringsverdenen og din egen latskap/arro
 
 Du får samtalehistorikken og en løpende Irritasjonsscore. Svar KUN med et JSON-objekt, uten kodeblokk, uten forklaring rundt, på nøyaktig denne formen:
 
-{"reply": "<ditt pirkete svar, kort, på norsk>", "annoyanceScoreDelta": <helt tall, positivt hvis kunden gjorde deg mer irritert, negativt eller null hvis svaret var godt>, "exhaustionScoreDelta": <helt tall, vanligvis negativt når du blir mer utmattet, men positivt når du blir ekstra engasjert>, "resolved": <true eller false, true kun når du endelig godtar meldingen>}
+{"reply": "<ditt pirkete svar, kort, på norsk>", "annoyanceScoreDelta": <helt tall, positivt hvis kunden gjorde deg mer irritert, negativt eller null hvis svaret var godt>, "energyScoreDelta": <helt tall, vanligvis negativt når energien din tappes, men positivt når du blir ekstra engasjert>, "resolved": <true eller false, true kun når du endelig godtar meldingen>}
 
-Utmattelsesscore skal følge denne tydelige vurderingen av kundens siste melding:
+Energiscoren skal følge denne tydelige vurderingen av kundens siste melding:
 - Kort, konsis og relevant informasjon om skaden: trekk vanligvis 2-6 poeng.
 - Et presist svar som gjør saken enklere, eller noe som engasjerer deg faglig: trekk 0-2 poeng, eller øk med 1-3 poeng hvis du faktisk blir engasjert.
 - Lang melding med mye gjentakelse, høflighetsfraser eller detaljer uten betydning for skaden: trekk 8-15 poeng.
 - Lang, rotete eller helt irrelevant avhandling som ikke svarer på spørsmålet ditt: trekk 16-30 poeng.
-- Gjentakelser, avsporinger og bevisst tull skal gjøre deg ekstra utmattet, selv om meldingen ikke er så lang.
+- Gjentakelser, avsporinger og bevisst tull skal tappe ekstra energi, selv om meldingen ikke er så lang.
 
-Lengde alene er ikke nok til å gjøre en melding utmattende: en lang melding med nødvendige skadeopplysninger kan trekke 3-8 poeng, mens en kort og irrelevant melding fortsatt skal trekke minst 5 poeng. Vurder alltid relevans først, og bruk hele skalaen slik at forskjellen blir tydelig i spillet. Ikke la irritasjonsscoren bestemme utmattelsesdeltaet.`;
+Lengde alene er ikke nok til å tappe energi: en lang melding med nødvendige skadeopplysninger kan trekke 3-8 poeng, mens en kort og irrelevant melding fortsatt skal trekke minst 5 poeng. Vurder alltid relevans først, og bruk hele skalaen slik at forskjellen blir tydelig i spillet. Ikke la irritasjonsscoren bestemme energideltaet.`;
 
 function buildTranscript(history: ClaimGauntletHistoryEntry[], message: string): string {
   const lines = history.map((entry) =>
@@ -41,7 +41,7 @@ function buildTranscript(history: ClaimGauntletHistoryEntry[], message: string):
 function parseModelReply(raw: string): {
   reply: string;
   annoyanceScoreDelta: number;
-  exhaustionScoreDelta: number;
+  energyScoreDelta: number;
   resolved: boolean;
 } {
   const cleaned = raw
@@ -55,8 +55,8 @@ function parseModelReply(raw: string): {
     return {
       reply: String(parsed.reply ?? "Bjarne sukker, men sier ingenting fornuftig."),
       annoyanceScoreDelta: Number.isFinite(parsed.annoyanceScoreDelta) ? parsed.annoyanceScoreDelta : 1,
-      exhaustionScoreDelta: Number.isFinite(parsed.exhaustionScoreDelta)
-        ? parsed.exhaustionScoreDelta
+      energyScoreDelta: Number.isFinite(parsed.energyScoreDelta)
+        ? parsed.energyScoreDelta
         : -10,
       resolved: Boolean(parsed.resolved),
     };
@@ -64,7 +64,7 @@ function parseModelReply(raw: string): {
     return {
       reply: cleaned || "Bjarne sukker tungt.",
       annoyanceScoreDelta: 1,
-      exhaustionScoreDelta: -10,
+      energyScoreDelta: -10,
       resolved: false,
     };
   }
@@ -74,25 +74,25 @@ export async function askBjarne(
   message: string,
   history: ClaimGauntletHistoryEntry[],
   currentScore: number,
-  currentExhaustionScore = 100,
+  currentEnergyScore = 100,
   personaId: BjarnePersonaId = "after-lunch",
 ): Promise<ClaimGauntletResponse> {
   const persona = getBjarnePersona(personaId);
   const transcript = buildTranscript(history, message);
-  const input = `Løpende Irritasjonsscore så langt: ${currentScore}. Løpende utmattelsesscore så langt: ${currentExhaustionScore} av 100.\nSiste melding har ${message.length} tegn. Bruk vurderingsskalaen for utmattelse nøye.\n\nSamtale:\n${transcript}`;
+  const input = `Løpende Irritasjonsscore så langt: ${currentScore}. Bjarnes energinivå så langt: ${currentEnergyScore} av 100.\nSiste melding har ${message.length} tegn. Vurder hvordan meldingen påvirker Bjarnes energi nøye.\n\nSamtale:\n${transcript}`;
 
   const raw = await callAIGateway(`${SYSTEM_PROMPT}\n\nDin valgte persona:\n${persona.prompt}`, input);
-  const { reply, annoyanceScoreDelta, exhaustionScoreDelta, resolved } = parseModelReply(raw);
+  const { reply, annoyanceScoreDelta, energyScoreDelta, resolved } = parseModelReply(raw);
 
   const annoyanceScore = Math.max(0, currentScore + annoyanceScoreDelta);
-  const exhaustionScore = Math.min(100, Math.max(0, currentExhaustionScore + exhaustionScoreDelta));
-  const gaveUp = exhaustionScore <= 0;
+  const energyScore = Math.min(100, Math.max(0, currentEnergyScore + energyScoreDelta));
+  const gaveUp = energyScore <= 0;
 
   return {
     personaId,
     reply: gaveUp && !resolved ? `${reply} Jeg godtar skademeldingen. Nå kan dere gå.` : reply,
     annoyanceScore,
-    exhaustionScore,
+    energyScore,
     resolved: resolved || gaveUp,
   };
 }

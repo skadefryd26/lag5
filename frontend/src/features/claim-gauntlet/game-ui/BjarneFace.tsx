@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useRef } from "react";
+import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { Box } from "@mantine/core";
 
 export type BjarneFaceHandle = {
@@ -6,11 +6,15 @@ export type BjarneFaceHandle = {
   reactTo: (text: string) => void;
   /** Sett et konkret uttrykk direkte, f.eks. "tenkende" mens vi venter på svar. */
   setExpression: (expression: string) => void;
+  /** Bytt Bjarnes hode ut med QR-merket i 10 sekunder, så bytt tilbake selv. */
+  showQrBadge: () => void;
 };
 
 type BjarneFaceProps = {
   size?: number;
 };
+
+const QR_BADGE_MS = 10_000;
 
 /**
  * Bjarnes ansikt, gjengitt i en iframe fra den ferdige three.js-figuren i public/bjarne.
@@ -22,6 +26,8 @@ export const BjarneFace = forwardRef<BjarneFaceHandle, BjarneFaceProps>(function
   ref,
 ) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [showQr, setShowQr] = useState(false);
+  const qrTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useImperativeHandle(ref, () => ({
     reactTo(text: string) {
@@ -29,6 +35,11 @@ export const BjarneFace = forwardRef<BjarneFaceHandle, BjarneFaceProps>(function
     },
     setExpression(expression: string) {
       iframeRef.current?.contentWindow?.postMessage({ uttrykk: expression }, "*");
+    },
+    showQrBadge() {
+      if (qrTimerRef.current) clearTimeout(qrTimerRef.current);
+      setShowQr(true);
+      qrTimerRef.current = setTimeout(() => setShowQr(false), QR_BADGE_MS);
     },
   }));
 
@@ -38,15 +49,23 @@ export const BjarneFace = forwardRef<BjarneFaceHandle, BjarneFaceProps>(function
       h={size * 1.15}
       style={{
         flexShrink: 0,
-        overflow: "hidden",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
       }}
     >
-      <iframe
-        ref={iframeRef}
-        src="/bjarne/bjarne.html"
-        title="Bjarnes ansikt"
-        style={{ width: "100%", height: "100%", border: "none", pointerEvents: "none" }}
-      />
+      {showQr ? (
+        // "Meld skade nå!!!" — kunden skal ikke kunne overse hintet. Litt
+        // mindre enn boksen, siden merkets navnelapp stikker ut til sidene.
+        <qr-merke size={`${Math.round(size * 0.6)}px`} text="MELD SKADE NÅ!!!" />
+      ) : (
+        <iframe
+          ref={iframeRef}
+          src="/bjarne/bjarne.html"
+          title="Bjarnes ansikt"
+          style={{ width: "100%", height: "100%", border: "none", pointerEvents: "none" }}
+        />
+      )}
     </Box>
   );
 });

@@ -1,5 +1,6 @@
 // Løs typing for de globale scriptene lastet i index.html (three.js UMD-bygget og
 // Gjensidiges spill-UI-bibliotek). Begge er ren JavaScript uten egne typedefinisjoner.
+import type * as React from "react";
 export {};
 
 declare global {
@@ -48,5 +49,20 @@ declare global {
   interface Window {
     THREE: unknown;
     GjensidigeGameUI: (three: unknown, options?: { palette?: Record<string, string> }) => GgGameUi;
+  }
+}
+
+// Det frittstående <qr-merke>-elementet fra public/bjarne/qr-merke.js (custom
+// element, ingen avhengigheter). Brukes som et midlertidig bytte for Bjarnes ansikt.
+// Med "jsx": "react-jsx" slår TypeScript opp JSX-navnerommet i react/jsx-runtime,
+// ikke det globale — derfor utvides det her i stedet for i `declare global`.
+declare module "react/jsx-runtime" {
+  namespace JSX {
+    interface IntrinsicElements {
+      "qr-merke": React.DetailedHTMLProps<
+        React.HTMLAttributes<HTMLElement> & { size?: string; text?: string; label?: string; logo?: string },
+        HTMLElement
+      >;
+    }
   }
 }

@@ -7,6 +7,7 @@ import {
   Button,
   Group,
   Paper,
+  Progress,
   ScrollArea,
   Stack,
   Text,
@@ -28,10 +29,26 @@ function scoreLabel(score: number): string {
   return "Bjarne later som han hører etter";
 }
 
+function timerColor(secondsLeft: number, roundSeconds: number): string {
+  const ratio = secondsLeft / roundSeconds;
+  if (ratio <= 0.2) return "red";
+  if (ratio <= 0.5) return "orange";
+  return "teal";
+}
+
 export function ClaimGauntletScreen() {
   const [draft, setDraft] = useState("");
-  const { messages, annoyanceScore, resolved, sendMessage, restart, isSending, error } =
-    useClaimGauntlet();
+  const {
+    messages,
+    annoyanceScore,
+    resolved,
+    sendMessage,
+    restart,
+    isSending,
+    error,
+    secondsLeft,
+    roundSeconds,
+  } = useClaimGauntlet();
 
   function handleSubmit() {
     if (!draft.trim()) return;
@@ -63,6 +80,27 @@ export function ClaimGauntletScreen() {
       <Text size="sm" c="dimmed" mb="xs">
         {scoreLabel(annoyanceScore)}
       </Text>
+
+      {!resolved && (
+        <Box mb="md">
+          <Group justify="space-between" mb={4}>
+            <Text size="xs" c="dimmed">
+              Bjarne venter på svaret ditt
+            </Text>
+            <Text size="xs" c={timerColor(secondsLeft, roundSeconds)} fw={600}>
+              {secondsLeft}s
+            </Text>
+          </Group>
+          <Progress
+            value={(secondsLeft / roundSeconds) * 100}
+            color={timerColor(secondsLeft, roundSeconds)}
+            size="sm"
+            radius="xl"
+            striped={secondsLeft <= roundSeconds * 0.2}
+            animated={secondsLeft <= roundSeconds * 0.2}
+          />
+        </Box>
+      )}
 
       <Paper withBorder radius="md" p="md" mb="md" bg="dark.8">
         <ScrollArea h={360} type="auto">

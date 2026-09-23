@@ -31,3 +31,67 @@ body {
   animation-iteration-count: infinite;
   transition: opacity 0.4s ease;
 }
+
+.claim-accepted-modal {
+  overflow: hidden;
+  border: 1px solid rgba(255, 190, 61, 0.45);
+  background: linear-gradient(145deg, #171c48 0%, #0d1239 100%);
+  box-shadow: 0 0 70px rgba(255, 166, 0, 0.22);
+}
+
+.claim-accepted-modal__body {
+  position: relative;
+  padding: 42px 34px 34px;
+}
+
+.claim-accepted-modal__title {
+  background: linear-gradient(90deg, #fff4c2, #ffad2f);
+  background-clip: text;
+  color: transparent;
+}
+
+.claim-accepted-modal__trophy {
+  box-shadow: 0 0 34px rgba(255, 195, 67, 0.32);
+  animation: claim-accepted-trophy 1.6s ease-in-out infinite;
+}
+
+.claim-accepted-modal__trophy span {
+  font-size: 3rem;
+}
+
+.claim-accepted-modal__confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.claim-accepted-modal__confetti span {
+  position: absolute;
+  top: -12px;
+  left: calc(var(--confetti-index) * 4.7%);
+  width: 7px;
+  height: 15px;
+  border-radius: 2px;
+  background: hsl(calc(var(--confetti-index) * 47), 92%, 65%);
+  transform: rotate(calc(var(--confetti-index) * 31deg));
+  animation: claim-accepted-confetti 2.8s ease-in infinite;
+  animation-delay: calc(var(--confetti-index) * -0.11s);
+}
+
+@keyframes claim-accepted-trophy {
+  0%, 100% { transform: rotate(-5deg) translateY(0); }
+  50% { transform: rotate(5deg) translateY(-6px); }
+}
+
+@keyframes claim-accepted-confetti {
+  0% { opacity: 0; transform: translateY(-12px) rotate(0deg); }
+  12% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(420px) rotate(540deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .claim-accepted-modal__trophy,
+  .claim-accepted-modal__confetti span {
+    animation: none;
+  }
+}

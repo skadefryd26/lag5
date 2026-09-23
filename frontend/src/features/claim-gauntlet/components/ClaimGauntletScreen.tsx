@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Avatar,
@@ -14,6 +14,8 @@ import {
   Title,
 } from "@mantine/core";
 import { useClaimGauntlet } from "../hooks/useClaimGauntlet";
+import { BjarneFace, type BjarneFaceHandle } from "../game-ui/BjarneFace";
+import { GameHud, type GameHudHandle } from "../game-ui/GameHud";
 
 function scoreColor(score: number): string {
   if (score >= 12) return "red";
@@ -32,12 +34,27 @@ export function ClaimGauntletScreen() {
   const [draft, setDraft] = useState("");
   const { messages, annoyanceScore, resolved, sendMessage, restart, isSending, error } =
     useClaimGauntlet();
+  const faceRef = useRef<BjarneFaceHandle>(null);
+  const hudRef = useRef<GameHudHandle>(null);
 
   function handleSubmit() {
     if (!draft.trim()) return;
     sendMessage(draft.trim());
     setDraft("");
   }
+
+  useEffect(() => {
+    if (isSending) faceRef.current?.setExpression("tenkende");
+  }, [isSending]);
+
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (last?.role === "bjarne") {
+      faceRef.current?.reactTo(last.text);
+      hudRef.current?.update(annoyanceScore, resolved);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
 
   return (
     <Box maw={720} mx="auto" py="xl" px="md">
@@ -116,27 +133,32 @@ export function ClaimGauntletScreen() {
           </Button>
         </Stack>
       ) : (
-        <Group align="flex-end">
-          <Textarea
-            flex={1}
-            placeholder="Beskriv skaden din, om du tør…"
-            autosize
-            minRows={2}
-            maxRows={5}
-            value={draft}
-            onChange={(e) => setDraft(e.currentTarget.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit();
-              }
-            }}
-          />
-          <Button onClick={handleSubmit} loading={isSending} color="orange">
-            Send til Bjarne
-          </Button>
+        <Group align="flex-end" wrap="nowrap">
+          <Group align="flex-end" flex={1}>
+            <Textarea
+              flex={1}
+              placeholder="Beskriv skaden din, om du tør…"
+              autosize
+              minRows={2}
+              maxRows={5}
+              value={draft}
+              onChange={(e) => setDraft(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
+            />
+            <Button onClick={handleSubmit} loading={isSending} color="orange">
+              Send til Bjarne
+            </Button>
+          </Group>
+          <BjarneFace ref={faceRef} />
         </Group>
       )}
+
+      <GameHud ref={hudRef} />
     </Box>
   );
 }

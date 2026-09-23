@@ -143,6 +143,12 @@ export function ClaimGauntletScreen() {
         faceRef.current?.reactTo(last.text);
       }
       hudRef.current?.onReply(annoyanceScore, energyScore, resolved);
+
+      // Kundens meldinger og Bjarnes svar legges til samtidig (samme
+      // setMessages-kall), så vi teller kundens meldinger her i stedet
+      // for i en egen "user"-gren som aldri ville blitt truffet.
+      const userCount = messages.filter((m) => m.role === "user").length;
+      hudRef.current?.onUserMessageCount(userCount);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);

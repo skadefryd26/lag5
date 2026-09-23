@@ -3,6 +3,7 @@ import type { ClaimGauntletRequest, ClaimGauntletResponse } from "../types/index
 import { askBjarne } from "../services/bjarneService.js";
 import { AIGatewayError } from "../clients/aiGatewayClient.js";
 import { takeScoreAdjustments } from "../services/scoreAdjustmentService.js";
+import { isBjarnePersonaId } from "../personas.js";
 
 export const claimGauntletRouter = Router();
 
@@ -11,6 +12,11 @@ claimGauntletRouter.post("/", async (req: Request, res: Response) => {
 
   if (typeof body.message !== "string" || body.message.trim() === "") {
     res.status(400).json({ error: "message er påkrevd og kan ikke være tom." });
+    return;
+  }
+
+  if (!isBjarnePersonaId(body.personaId)) {
+    res.status(400).json({ error: "personaId er påkrevd og må være en kjent Bjarne-persona." });
     return;
   }
 
@@ -29,6 +35,7 @@ claimGauntletRouter.post("/", async (req: Request, res: Response) => {
       history,
       currentScore,
       exhaustionScore,
+      body.personaId,
     );
     res.json(result);
   } catch (error) {

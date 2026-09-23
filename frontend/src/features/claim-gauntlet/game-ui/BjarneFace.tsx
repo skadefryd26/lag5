@@ -38,10 +38,7 @@ export const BjarneFace = forwardRef<BjarneFaceHandle, BjarneFaceProps>(function
       h={size * 1.15}
       style={{
         flexShrink: 0,
-        borderRadius: "var(--mantine-radius-md)",
         overflow: "hidden",
-        border: "1px solid var(--mantine-color-dark-4)",
-        background: "#060b2e",
       }}
     >
       <iframe

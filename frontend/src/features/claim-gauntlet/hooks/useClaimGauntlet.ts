@@ -76,6 +76,12 @@ export function useClaimGauntlet() {
     [mutation, resolved],
   );
 
+  // Brukes av snarveier som ikke går via et vanlig Bjarne-svar (f.eks. "Vipps"-
+  // QR-koden): sender rett til skjermen for mottatt skademelding.
+  const forceResolve = useCallback(() => {
+    setResolved(true);
+  }, []);
+
   const restart = useCallback(() => {
     const nextPersona = pickRandomPersona(persona.id);
     setPersona(nextPersona);
@@ -128,6 +134,7 @@ export function useClaimGauntlet() {
     suggestions,
     sendMessage,
     restart,
+    forceResolve,
     isSending: mutation.isPending,
     error: mutation.error as Error | null,
     secondsLeft,

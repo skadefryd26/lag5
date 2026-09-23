@@ -11,9 +11,6 @@ type DisplayMessage = {
   text: string;
 };
 
-const ROUND_SECONDS = 60;
-const TIMEOUT_PENALTY = 3;
-
 const IMPATIENCE_LINES = [
   "Skal du svare i dag, eller venter du på at kaffen min skal bli kald først?",
   "Jeg har ventet så lenge at jeg rakk å hente meg en ny kaffe. Fortsatt ingenting fra deg.",
@@ -26,14 +23,21 @@ function pickImpatienceLine(round: number): string {
   return IMPATIENCE_LINES[round % IMPATIENCE_LINES.length];
 }
 
+function createInitialGame() {
+  const persona = pickRandomPersona();
+  return { persona, secondsLeft: persona.rules.roundSeconds };
+}
+
 export function useClaimGauntlet() {
-  const [persona, setPersona] = useState(() => pickRandomPersona());
+  const [initialGame] = useState(createInitialGame);
+  const [persona, setPersona] = useState(initialGame.persona);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [annoyanceScore, setAnnoyanceScore] = useState(0);
   const [exhaustionScore, setExhaustionScore] = useState(STARTING_EXHAUSTION_SCORE);
   const [resolved, setResolved] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(ROUND_SECONDS);
+  const [secondsLeft, setSecondsLeft] = useState(initialGame.secondsLeft);
   const timeoutRoundRef = useRef(0);
+  const exhaustionScoreRef = useRef(STARTING_EXHAUSTION_SCORE);
 
   const mutation = useMutation({
     mutationFn: (message: string) => {
@@ -54,8 +58,9 @@ export function useClaimGauntlet() {
       ]);
       setAnnoyanceScore(result.annoyanceScore);
       setExhaustionScore(result.exhaustionScore);
+      exhaustionScoreRef.current = result.exhaustionScore;
       setResolved(result.resolved);
-      setSecondsLeft(ROUND_SECONDS);
+      setSecondsLeft(persona.rules.roundSeconds);
       timeoutRoundRef.current = 0;
     },
   });
@@ -69,15 +74,17 @@ export function useClaimGauntlet() {
   );
 
   const restart = useCallback(() => {
-    setPersona((currentPersona) => pickRandomPersona(currentPersona.id));
+    const nextPersona = pickRandomPersona(persona.id);
+    setPersona(nextPersona);
     setMessages([]);
     setAnnoyanceScore(0);
     setExhaustionScore(STARTING_EXHAUSTION_SCORE);
+    exhaustionScoreRef.current = STARTING_EXHAUSTION_SCORE;
     setResolved(false);
-    setSecondsLeft(ROUND_SECONDS);
+    setSecondsLeft(nextPersona.rules.roundSeconds);
     timeoutRoundRef.current = 0;
     mutation.reset();
-  }, [mutation]);
+  }, [mutation, persona.id]);
 
   // Per-round pressure timer: ticks down while the customer is expected to
   // reply. Paused while resolved, or while a real request to Bjarne is in
@@ -92,13 +99,20 @@ export function useClaimGauntlet() {
         timeoutRoundRef.current += 1;
         const line = pickImpatienceLine(timeoutRoundRef.current - 1);
         setMessages((msgs) => [...msgs, { role: "bjarne", text: line }]);
-        setAnnoyanceScore((score) => score + TIMEOUT_PENALTY);
-        return ROUND_SECONDS;
+        setAnnoyanceScore((score) => score + persona.rules.timeoutAnnoyancePenalty);
+        const nextExhaustionScore = Math.max(
+          0,
+          exhaustionScoreRef.current - persona.rules.timeoutExhaustionPenalty,
+        );
+        exhaustionScoreRef.current = nextExhaustionScore;
+        setExhaustionScore(nextExhaustionScore);
+        if (nextExhaustionScore === 0) setResolved(true);
+        return persona.rules.roundSeconds;
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [resolved, mutation.isPending]);
+  }, [persona, resolved, mutation.isPending]);
 
   return {
     messages,
@@ -111,6 +125,6 @@ export function useClaimGauntlet() {
     isSending: mutation.isPending,
     error: mutation.error as Error | null,
     secondsLeft,
-    roundSeconds: ROUND_SECONDS,
+    roundSeconds: persona.rules.roundSeconds,
   };
 }

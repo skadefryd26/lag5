@@ -207,7 +207,12 @@ export function ClaimGauntletScreen() {
       <Box mb="md">
         <Group justify="space-between" mb={4}>
           <Text size="sm" fw={600}>Bjarnes utmattelse</Text>
-          <Text size="sm" c="dimmed">{exhaustionScore}/100</Text>
+          <Group gap="md">
+            <Text size="sm" c="dimmed">{exhaustionScore}/100</Text>
+            <Text size="sm" c={secondsLeft <= 10 ? "red.4" : "dimmed"}>
+              {secondsLeft}s igjen
+            </Text>
+          </Group>
         </Group>
         <Progress value={exhaustionScore} color={exhaustionScore <= 25 ? "red" : "orange"} />
       </Box>

@@ -33,6 +33,20 @@ const FACE_SIZE = 280;
 const FACE_HEIGHT = FACE_SIZE * 1.15;
 const DIALOG_PADDING = 32; // Paper p="md" (16px) på topp og bunn.
 
+// Skjer det ingenting på 20 sekunder, bytter Bjarne ansiktsuttrykk selv —
+// han later ikke som han står stille og venter.
+const IDLE_MS = 20_000;
+const IDLE_EXPRESSIONS = [
+  "undrende",
+  "tenkende",
+  "skeptisk",
+  "oppgitt",
+  "mistenksom",
+  "tvilende",
+  "forbauset",
+  "sporrende",
+];
+
 export function ClaimGauntletScreen() {
   const [draft, setDraft] = useState("");
   const {
@@ -49,6 +63,7 @@ export function ClaimGauntletScreen() {
   } = useClaimGauntlet();
   const faceRef = useRef<BjarneFaceHandle>(null);
   const hudRef = useRef<GameHudHandle>(null);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleSubmit() {
     if (!draft.trim()) return;
@@ -71,6 +86,23 @@ export function ClaimGauntletScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
+
+  // Ansiktet skal alltid vise noe: bytt uttrykk ved hver melding (over), og
+  // hvis det er helt stille, la Bjarne skifte uttrykk selv hvert 20. sekund.
+  useEffect(() => {
+    function scheduleIdle() {
+      idleTimerRef.current = setTimeout(() => {
+        const pick = IDLE_EXPRESSIONS[Math.floor(Math.random() * IDLE_EXPRESSIONS.length)];
+        faceRef.current?.setExpression(pick);
+        scheduleIdle();
+      }, IDLE_MS);
+    }
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    if (!resolved) scheduleIdle();
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [messages, isSending, resolved]);
 
   return (
     <Box maw={900} mx="auto" py="xl" px="md">

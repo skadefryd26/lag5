@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import {
   Alert,
   Avatar,
@@ -16,10 +17,37 @@ import { useClaimGauntlet } from "../hooks/useClaimGauntlet";
 import { BjarneFace, type BjarneFaceHandle } from "../game-ui/BjarneFace";
 import { GameHud, type GameHudHandle } from "../game-ui/GameHud";
 
+/**
+ * How stressed the vignette should look for the remaining time in the
+ * round: closer to zero seconds means faster pulsing and a more intense
+ * glow. Returns null once we're comfortably early in the round, so
+ * the effect only kicks in when it should actually feel tense.
+ */
+function vignetteIntensity(secondsLeft: number, roundSeconds: number) {
+  const ratio = secondsLeft / roundSeconds;
+  if (ratio > 0.5) return null;
+
+  // Duration goes from ~2.2s (calm-ish) down to ~0.5s (frantic) as ratio -> 0.
+  const pulseDuration = 0.5 + ratio * 3.4;
+  const maxOpacity = 0.35 + (1 - ratio) * 0.55;
+  const minOpacity = maxOpacity * 0.35;
+
+  return { pulseDuration, maxOpacity, minOpacity };
+}
+
 export function ClaimGauntletScreen() {
   const [draft, setDraft] = useState("");
-  const { messages, annoyanceScore, resolved, sendMessage, restart, isSending, error } =
-    useClaimGauntlet();
+  const {
+    messages,
+    annoyanceScore,
+    resolved,
+    sendMessage,
+    restart,
+    isSending,
+    error,
+    secondsLeft,
+    roundSeconds,
+  } = useClaimGauntlet();
   const faceRef = useRef<BjarneFaceHandle>(null);
   const hudRef = useRef<GameHudHandle>(null);
 
@@ -29,6 +57,8 @@ export function ClaimGauntletScreen() {
     sendMessage(draft.trim());
     setDraft("");
   }
+
+  const vignette = resolved ? null : vignetteIntensity(secondsLeft, roundSeconds);
 
   useEffect(() => {
     if (isSending) faceRef.current?.setExpression("tenkende");
@@ -45,6 +75,18 @@ export function ClaimGauntletScreen() {
 
   return (
     <Box maw={900} mx="auto" py="xl" px="md">
+      {vignette && (
+        <div
+          className="claim-gauntlet-vignette"
+          style={
+            {
+              animationDuration: `${vignette.pulseDuration}s`,
+              "--vignette-min-opacity": vignette.minOpacity,
+              "--vignette-max-opacity": vignette.maxOpacity,
+            } as CSSProperties
+          }
+        />
+      )}
       <Group mb="md">
         <Avatar color="dark" radius="xl" size="lg">
           B

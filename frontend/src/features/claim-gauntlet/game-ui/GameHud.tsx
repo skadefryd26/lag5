@@ -5,7 +5,7 @@ export type GameHudHandle = {
   /** Kalles når en melding sendes: starter to-sekunders-teller til timeglass-badgen. */
   onSend: () => void;
   /** Kalles når Bjarne har svart: avbryter tellingen, oppdaterer sliden og popper detektiv-badgen. */
-  onReply: (score: number, resolved: boolean) => void;
+  onReply: (score: number, energyScore: number, resolved: boolean) => void;
 };
 
 /**
@@ -15,16 +15,18 @@ export type GameHudHandle = {
 export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
   const barContainerRef = useRef<HTMLDivElement>(null);
   const meaningBarContainerRef = useRef<HTMLDivElement>(null);
+  const energyBarContainerRef = useRef<HTMLDivElement>(null);
   const waitingCellRef = useRef<HTMLDivElement>(null);
   const detectiveCellRef = useRef<HTMLDivElement>(null);
   const countrysideCellRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<{
     bar: GgGameUiBarApi | null;
     meaningBar: GgGameUiBarApi | null;
+    energyBar: GgGameUiBarApi | null;
     waiting: GgGameUiBadgeApi | null;
     detective: GgGameUiBadgeApi | null;
     countryside: GgGameUiBadgeApi | null;
-  }>({ bar: null, meaningBar: null, waiting: null, detective: null, countryside: null });
+  }>({ bar: null, meaningBar: null, energyBar: null, waiting: null, detective: null, countryside: null });
   const waitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const replyCountRef = useRef(0);
 
@@ -40,12 +42,18 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
       });
     }
     if (meaningBarContainerRef.current) {
-      // En helt overflødig, men interaktiv måler — Bjarnes bidrag til filosofien.
       apiRef.current.meaningBar = ui.createStatBar(meaningBarContainerRef.current, {
         kind: "trust",
         label: "Meningen med livet",
         value: 0.42,
         interactive: true,
+      });
+    }
+    if (energyBarContainerRef.current) {
+      apiRef.current.energyBar = ui.createStatBar(energyBarContainerRef.current, {
+        kind: "battery",
+        label: "Bjarnes energi",
+        value: 1,
       });
     }
     if (waitingCellRef.current) {
@@ -76,10 +84,11 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
       if (waitTimerRef.current) clearTimeout(waitTimerRef.current);
       apiRef.current.bar?.dispose();
       apiRef.current.meaningBar?.dispose();
+      apiRef.current.energyBar?.dispose();
       apiRef.current.waiting?.dispose();
       apiRef.current.detective?.dispose();
       apiRef.current.countryside?.dispose();
-      apiRef.current = { bar: null, meaningBar: null, waiting: null, detective: null, countryside: null };
+      apiRef.current = { bar: null, meaningBar: null, energyBar: null, waiting: null, detective: null, countryside: null };
     };
   }, []);
 
@@ -92,7 +101,7 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
         apiRef.current.waiting?.pop();
       }, 2000);
     },
-    onReply(score: number, resolved: boolean) {
+    onReply(score: number, energyScore: number, resolved: boolean) {
       if (waitTimerRef.current) {
         clearTimeout(waitTimerRef.current);
         waitTimerRef.current = null;
@@ -101,6 +110,7 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
       if (el) el.style.visibility = "hidden";
 
       apiRef.current.bar?.setValue(Math.min(1, score / 15));
+      apiRef.current.energyBar?.setValue(Math.max(0, Math.min(1, energyScore / 100)));
       apiRef.current.detective?.pop();
 
       replyCountRef.current += 1;
@@ -110,17 +120,32 @@ export const GameHud = forwardRef<GameHudHandle>(function GameHud(_props, ref) {
         apiRef.current.countryside?.pop();
       }
 
-      if (resolved) apiRef.current.bar?.setValue(0);
+      if (resolved) {
+        apiRef.current.bar?.setValue(0);
+        apiRef.current.energyBar?.setValue(1);
+      }
     },
   }));
 
   return (
-    <Group align="center" gap="md" my="md" wrap="nowrap">
-      <div ref={barContainerRef} style={{ maxWidth: 280, flex: 1 }} />
-      <div ref={meaningBarContainerRef} style={{ maxWidth: 280, flex: 1 }} />
-      <div ref={waitingCellRef} style={{ width: 84, flexShrink: 0 }} />
-      <div ref={detectiveCellRef} style={{ width: 84, flexShrink: 0 }} />
-      <div ref={countrysideCellRef} style={{ width: 84, flexShrink: 0 }} />
-    </Group>
+    <div style={{ margin: "16px 0" }}>
+      <Group align="center" gap="md" wrap="nowrap">
+        <div ref={barContainerRef} style={{ flex: "1 1 0", minWidth: 0 }} />
+        <div ref={meaningBarContainerRef} style={{ flex: "1 1 0", minWidth: 0 }} />
+        <div ref={energyBarContainerRef} style={{ flex: "1 1 0", minWidth: 0 }} />
+      </Group>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 8,
+          marginTop: 4,
+        }}
+      >
+        <div ref={waitingCellRef} style={{ width: 84, flexShrink: 0 }} />
+        <div ref={detectiveCellRef} style={{ width: 84, flexShrink: 0 }} />
+        <div ref={countrysideCellRef} style={{ width: 84, flexShrink: 0 }} />
+      </div>
+    </div>
   );
 });

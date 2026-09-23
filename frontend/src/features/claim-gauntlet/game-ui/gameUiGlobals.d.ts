@@ -35,7 +35,7 @@ declare global {
     createStatBar: (
       container: HTMLElement,
       opts: {
-        kind: "health" | "frustration" | "trust";
+        kind: "health" | "frustration" | "trust" | "battery";
         value?: number;
         label?: string;
         interactive?: boolean;

@@ -8,7 +8,6 @@ import {
   Chip,
   Group,
   Paper,
-  Progress,
   ScrollArea,
   Stack,
   Text,
@@ -143,7 +142,7 @@ export function ClaimGauntletScreen() {
       } else {
         faceRef.current?.reactTo(last.text);
       }
-      hudRef.current?.onReply(annoyanceScore, resolved);
+      hudRef.current?.onReply(annoyanceScore, energyScore, resolved);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
@@ -233,14 +232,6 @@ export function ClaimGauntletScreen() {
         </Paper>
         <BjarneFace ref={faceRef} size={FACE_SIZE} />
       </Group>
-
-      <Box mb="md">
-        <Group justify="space-between" mb={4}>
-          <Text size="sm" fw={600}>Bjarnes energinivå</Text>
-          <Text size="sm" c="dimmed">{energyScore}/100</Text>
-        </Group>
-        <Progress value={energyScore} color={energyScore <= 25 ? "red" : "orange"} />
-      </Box>
 
       <GameHud ref={hudRef} />
 

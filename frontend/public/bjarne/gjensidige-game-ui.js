@@ -7,7 +7,7 @@
  *   const merke = ui.createBadge(el2, { kind: 'thumbDown' });
  *   merke.pop();
  *
- * Målere: health | frustration | trust
+ * Målere: health | frustration | trust | battery
  * Merker: thumbDown | forward | thumbUp | solved | escalation | waiting | repeat | empathy | aha | happy
  */
 (function (global) {
@@ -38,6 +38,11 @@
     trust: {
       label: 'Tillit', icon: 'shield', goodDir: 1,
       stops: [[0, 'coral'], [0.3, 'skyLight'], [0.7, 'sky']],
+      danger: function (v) { return v < 0.25; }, dangerStyle: 'heartbeat'
+    },
+    battery: {
+      label: 'Batteri', icon: 'battery', goodDir: 1,
+      stops: [[0, 'coral'], [0.25, 'orange'], [0.55, 'lantern'], [0.8, 'green']],
       danger: function (v) { return v < 0.25; }, dangerStyle: 'heartbeat'
     }
   };
@@ -244,6 +249,12 @@
         var s = new THREE.Shape();
         s.moveTo(-0.46, 0.46); s.quadraticCurveTo(0, 0.64, 0.46, 0.46); s.lineTo(0.46, 0.06);
         s.quadraticCurveTo(0.42, -0.4, 0, -0.62); s.quadraticCurveTo(-0.42, -0.4, -0.46, 0.06);
+        s.closePath(); return s;
+      },
+      battery: function () {
+        var s = new THREE.Shape();
+        s.moveTo(-0.48, 0.38); s.lineTo(0.3, 0.38); s.lineTo(0.3, 0.2); s.lineTo(0.52, 0.2);
+        s.lineTo(0.52, -0.2); s.lineTo(0.3, -0.2); s.lineTo(0.3, -0.38); s.lineTo(-0.48, -0.38);
         s.closePath(); return s;
       }
     };
